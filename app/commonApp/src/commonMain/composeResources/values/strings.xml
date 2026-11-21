@@ -1139,5 +1139,7 @@
     <string name="profile_select_target">Choose a profile</string>
     <string name="profile_add_media">Add to profile</string>
     <string name="profile_remove_media">Remove from profile</string>
+    <string name="profile_add_album">Add album to profile</string>
+    <string name="profile_remove_album">Remove album from profile</string>
 </resources>
 
