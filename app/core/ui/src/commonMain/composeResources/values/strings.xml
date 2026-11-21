@@ -168,4 +168,10 @@
     <string name="timeline_open_place">Show photos taken in %1$s</string>
     <string name="timeline_open_months">Show all months</string>
     <string name="timeline_select_month">Select %1$s</string>
+    <string name="profile_all_photos">All Photos</string>
+    <string name="profile_add">Add profile</string>
+    <string name="profile_create_title">Create profile</string>
+    <string name="profile_name_hint">Profile name</string>
+    <string name="profile_create">Create</string>
+    <string name="profile_cancel">Cancel</string>
 </resources>
