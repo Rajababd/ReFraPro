@@ -100,6 +100,7 @@ import com.dot.gallery.core.presentation.components.rememberDetailHeaderCollapse
 import com.dot.gallery.feature.albums.ui.components.AlbumSortPill
 import com.dot.gallery.feature.albums.ui.components.AlbumSortTopBarAction
 import androidx.compose.material.icons.outlined.PhotoAlbum
+import androidx.compose.material.icons.outlined.PhotoLibrary
 import com.dot.gallery.generated.resources.more_options
 import com.dot.gallery.generated.resources.s_items
 import com.dot.gallery.core.presentation.components.ModalSheet
@@ -141,8 +142,12 @@ import com.dot.gallery.core.ui.util.rememberAppBottomSheetState
 import com.dot.gallery.injection.injectViewModel
 import com.dot.gallery.core.presentation.components.rememberMosaicPinchZoomState
 import com.dot.gallery.feature.albums.CloudAlbumManageViewModel
+import com.dot.gallery.app.presentation.profiles.ProfileViewModel
+import com.dot.gallery.app.presentation.profiles.ProfileTargetSheet
 import com.dot.gallery.generated.resources.Res
 import com.dot.gallery.generated.resources.album_name
+import com.dot.gallery.generated.resources.profile_add_album
+import com.dot.gallery.generated.resources.profile_remove_album
 import com.dot.gallery.generated.resources.albums_merged_description
 import com.dot.gallery.generated.resources.albums_merged_title
 import com.dot.gallery.generated.resources.cancel
@@ -209,6 +214,13 @@ fun AlbumTimelineScreen(
     val selector = LocalMediaSelector.current
     val selectedMedia = selector.selectedMedia.collectAsStateWithLifecycle()
     val cloudAlbumManageViewModel = injectViewModel<CloudAlbumManageViewModel> {cloudAlbumManageViewModel}
+    val profileViewModel = injectViewModel<ProfileViewModel> { profileViewModel }
+    val profileItems by profileViewModel.profiles.collectAsStateWithLifecycle()
+    val activeProfileId by profileViewModel.activeProfileId.collectAsStateWithLifecycle()
+    var showProfileTargetSheet by rememberSaveable { mutableStateOf(false) }
+    val profileAlbumIds = remember(currentAlbum, albumId) {
+        (currentAlbum?.sourceAlbumIds?.takeIf { it.isNotEmpty() } ?: listOf(albumId)).distinct()
+    }
     val cloudSettingsByConfigId by CloudRuntimeSettings.settingsByConfigId.collectAsStateWithLifecycle()
 
     // Sort preferences - saved to DataStore, read by MediaDistributor
@@ -449,6 +461,27 @@ fun AlbumTimelineScreen(
                     }
                 }
                 add {
+                    GalleryPageTopBarAction(
+                        icon = Icons.Outlined.PhotoLibrary,
+                        contentDescription = stringResource(
+                            if (activeProfileId == 0L) Res.string.profile_add_album
+                            else Res.string.profile_remove_album
+                        ),
+                        onClick = {
+                            if (activeProfileId == 0L) {
+                                showProfileTargetSheet = true
+                            } else {
+                                profileViewModel.removeAlbumFromProfile(activeProfileId, profileAlbumIds.first())
+                                if (profileAlbumIds.size > 1) {
+                                    profileAlbumIds.drop(1).forEach {
+                                        profileViewModel.removeAlbumFromProfile(activeProfileId, it)
+                                    }
+                                }
+                            }
+                        },
+                    )
+                }
+                add {
                     AlbumSortTopBarAction(
                         currentSort = albumMediaSort,
                         onSortChange = { newSort -> albumMediaSort = newSort },
@@ -481,6 +514,15 @@ fun AlbumTimelineScreen(
                 .align(Alignment.BottomEnd),
             allMedia = mediaState.value,
             selectedMedia = selectedMediaList
+        )
+        ProfileTargetSheet(
+            visible = showProfileTargetSheet,
+            profiles = profileItems,
+            onDismiss = { showProfileTargetSheet = false },
+            onProfileSelected = { profileId ->
+                profileViewModel.addAlbumsToProfile(profileId, profileAlbumIds)
+                showProfileTargetSheet = false
+            }
         )
         SlideshowOptionsSheet(
             state = slideshowSheetState,
