@@ -42,7 +42,7 @@ apkVersioning {
     flavorVersionCodes.set(abiVersionCodes)
     versionCodeMultiplier.set(10)
     outputFileName.set("{appName}-{versionName}-{versionCode}{suffix}-{ml}-{abi}-{buildType}")
-    variables.put("appName", "ReFra")
+    variables.put("appName", "ReFraPro")
     val offlineSuffix = if (isOffline) "-offline" else ""
     variables.put("suffix", offlineSuffix)
 }
@@ -176,7 +176,7 @@ android {
     ndkVersion = pinnedNdkVersion
 
     defaultConfig {
-        applicationId = "com.dot.gallery"
+        applicationId = "com.rajababd.refrapro"
         minSdk = 29
         targetSdk = 37
         versionCode = 60001
@@ -187,7 +187,7 @@ android {
             useSupportLibrary = true
         }
         val offlinePrefix = if (isOffline) "-offline" else ""
-        base.archivesName.set("ReFra-${versionName}-$versionCode$offlinePrefix")
+        base.archivesName.set("ReFraPro-${versionName}-$versionCode$offlinePrefix")
         val cartoBasemapKey = if (includeMaps) {
             providers.environmentVariable("CARTO_BASEMAP_KEY").orNull
                 ?.takeIf(String::isNotBlank)
@@ -232,7 +232,7 @@ android {
         getByName("debug") {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
-            manifestPlaceholders["appProvider"] = "com.dot.gallery.debug.media_provider"
+            manifestPlaceholders["appProvider"] = "com.rajababd.refrapro.debug.media_provider"
             buildConfigField("Boolean", "ALLOW_ALL_FILES_ACCESS", "$allowAllFilesAccess")
             buildConfigField("Boolean", "OFFLINE_MODE", "$isOffline")
             buildConfigField("Boolean", "MAPS_ENABLED", "$includeMaps")
@@ -245,7 +245,7 @@ android {
             buildConfigField(
                 "String",
                 "CONTENT_AUTHORITY",
-                "\"com.dot.gallery.debug.media_provider\""
+                "\"com.rajababd.refrapro.debug.media_provider\""
             )
             buildConfigField("Boolean", "ENABLE_INDEXING", "false")
             buildConfigField("Boolean", "ALLOW_INSECURE_TLS", "true")
@@ -255,7 +255,7 @@ android {
         }
         getByName("release") {
             manifestPlaceholders += mapOf(
-                "appProvider" to "com.dot.gallery.media_provider"
+                "appProvider" to "com.rajababd.refrapro.media_provider"
             )
             isMinifyEnabled = true
             isShrinkResources = true
@@ -275,7 +275,7 @@ android {
             buildConfigField("Boolean", "WEBDAV_ENABLED", "$includeWebdav")
             buildConfigField("Boolean", "SMB_ENABLED", "$includeSmb")
             buildConfigField("Boolean", "NFS_ENABLED", "$includeNfs")
-            buildConfigField("String", "CONTENT_AUTHORITY", "\"com.dot.gallery.media_provider\"")
+            buildConfigField("String", "CONTENT_AUTHORITY", "\"com.rajababd.refrapro.media_provider\"")
             buildConfigField("Boolean", "ENABLE_INDEXING", "true")
             buildConfigField("Boolean", "ALLOW_INSECURE_TLS", "true")
         }
@@ -286,11 +286,11 @@ android {
             isShrinkResources = false
             applicationIdSuffix = ".staging"
             versionNameSuffix = "-staging"
-            manifestPlaceholders["appProvider"] = "com.dot.staging.debug.media_provider"
+            manifestPlaceholders["appProvider"] = "com.rajababd.refrapro.staging.debug.media_provider"
             buildConfigField(
                 "String",
                 "CONTENT_AUTHORITY",
-                "\"com.dot.staging.debug.media_provider\""
+                "\"com.rajababd.refrapro.staging.debug.media_provider\""
             )
             buildConfigField("Boolean", "ALLOW_ALL_FILES_ACCESS", "$allowAllFilesAccess")
             buildConfigField("Boolean", "ENABLE_INDEXING", "true")
@@ -315,7 +315,7 @@ android {
             matchingFallbacks += "release"
             applicationIdSuffix = ".gplay"
             ndk.debugSymbolLevel = "FULL"
-            manifestPlaceholders["appProvider"] = "com.dot.gallery.gplay.media_provider"
+            manifestPlaceholders["appProvider"] = "com.rajababd.refrapro.gplay.media_provider"
             buildConfigField("Boolean", "ALLOW_ALL_FILES_ACCESS", "false")
             buildConfigField("Boolean", "OFFLINE_MODE", "$isOffline")
             buildConfigField("Boolean", "MAPS_ENABLED", "$includeMaps")
@@ -325,7 +325,7 @@ android {
             buildConfigField("Boolean", "WEBDAV_ENABLED", "$includeWebdav")
             buildConfigField("Boolean", "SMB_ENABLED", "$includeSmb")
             buildConfigField("Boolean", "NFS_ENABLED", "$includeNfs")
-            buildConfigField("String", "CONTENT_AUTHORITY", "\"com.dot.gallery.gplay.media_provider\"")
+            buildConfigField("String", "CONTENT_AUTHORITY", "\"com.rajababd.refrapro.gplay.media_provider\"")
             buildConfigField("Boolean", "ENABLE_INDEXING", "true")
             buildConfigField("Boolean", "ALLOW_INSECURE_TLS", "false")
         }
