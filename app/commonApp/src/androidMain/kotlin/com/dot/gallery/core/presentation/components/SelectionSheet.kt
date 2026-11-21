@@ -977,7 +977,7 @@ fun <T : Media> BoxScope.SelectionSheet(
                     }
                 }
             }
-            if (!isInVault && !isInPrivateFolder && selectedMedia.isNotEmpty()) {
+            if (!isInVault && !isInPrivateFolder && !isCloudSelection && !isMixedCloudSelection && selectedMedia.isNotEmpty()) {
                 val isAllPhotos = activeProfileId == 0L
                 MiddleActionButton(
                     icon = Icons.Outlined.PhotoLibrary,
