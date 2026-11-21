@@ -23,6 +23,7 @@ import com.dot.gallery.domain.model.AlbumThumbnail
 import com.dot.gallery.domain.model.Category
 import com.dot.gallery.domain.model.Collection
 import com.dot.gallery.domain.model.CollectionWithCount
+import com.dot.gallery.domain.model.Profile
 import com.dot.gallery.domain.model.IgnoredAlbum
 import com.dot.gallery.domain.model.ImageEmbedding
 import com.dot.gallery.domain.model.Media
@@ -396,6 +397,48 @@ interface CoreMediaRepository {
     fun getAlbumIdsInCollection(collectionId: Long): Flow<List<Long>>
 
     fun getExcludedMediaIdsInCollection(collectionId: Long): Flow<List<Long>>
+
+    // ============ Profiles ============
+
+    suspend fun insertProfile(profile: Profile): Long
+
+    suspend fun updateProfile(profile: Profile)
+
+    suspend fun deleteProfile(profileId: Long)
+
+    fun getProfile(profileId: Long): Flow<Profile?>
+
+    suspend fun getProfileAsync(profileId: Long): Profile?
+
+    fun getProfiles(): Flow<List<Profile>>
+
+    fun getProfileCount(): Flow<Int>
+
+    suspend fun addMediaToProfile(profileId: Long, mediaId: Long)
+
+    suspend fun addMediaListToProfile(profileId: Long, mediaIds: List<Long>)
+
+    suspend fun removeMediaFromProfile(profileId: Long, mediaId: Long)
+
+    fun getDirectProfileMediaIds(profileId: Long): Flow<List<Long>>
+
+    fun getProfileMediaIds(profileId: Long): Flow<List<Long>>
+
+    fun getProfileMediaCount(profileId: Long): Flow<Int>
+
+    suspend fun addAlbumsToProfile(profileId: Long, albumIds: List<Long>)
+
+    suspend fun removeAlbumFromProfile(profileId: Long, albumId: Long)
+
+    suspend fun replaceAlbumsInProfile(profileId: Long, albumIds: List<Long>)
+
+    fun getAlbumIdsInProfile(profileId: Long): Flow<List<Long>>
+
+    fun getExcludedMediaIdsInProfile(profileId: Long): Flow<List<Long>>
+
+    suspend fun excludeMediaFromProfile(profileId: Long, mediaId: Long)
+
+    suspend fun clearMediaExclusionFromProfile(profileId: Long, mediaId: Long)
 
     // ============ Album Sections ============
 
