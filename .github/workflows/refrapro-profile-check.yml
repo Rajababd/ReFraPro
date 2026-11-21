@@ -28,6 +28,15 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
+      - name: Install pinned Android CMake
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(command -v sdkmanager)"
+          fi
+          yes | "$SDKMANAGER" --licenses >/dev/null
+          "$SDKMANAGER" --install "cmake;3.31.6"
+          test -x "$ANDROID_HOME/cmake/3.31.6/bin/cmake"
       - uses: gradle/actions/setup-gradle@v4
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
