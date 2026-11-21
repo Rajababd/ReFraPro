@@ -1077,4 +1077,6 @@
     <string name="profile_select_target">اختر البروفايل</string>
     <string name="profile_add_media">إضافة إلى بروفايل</string>
     <string name="profile_remove_media">إزالة من البروفايل</string>
+    <string name="profile_add_album">إضافة الألبوم إلى بروفايل</string>
+    <string name="profile_remove_album">إزالة الألبوم من البروفايل</string>
 </resources>
