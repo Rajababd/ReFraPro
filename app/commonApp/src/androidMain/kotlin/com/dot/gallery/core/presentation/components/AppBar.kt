@@ -54,6 +54,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Photo
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -64,6 +67,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -103,6 +107,7 @@ import com.dot.gallery.core.util.or
 import com.dot.gallery.feature.editor.adjustments.varfilter.Pop
 import com.dot.gallery.feature.viewer.ViewerDismissState
 import com.dot.gallery.app.presentation.albums.AlbumsScreen
+import com.dot.gallery.app.presentation.profiles.ProfileDrawerContent
 import com.dot.gallery.core.presentation.components.shape
 import com.dot.gallery.feature.editor.adjustments.filters.None
 import com.dot.gallery.app.presentation.library.LibraryScreen
@@ -114,6 +119,7 @@ import com.dot.gallery.generated.resources.Res
 import com.dot.gallery.generated.resources.library
 import com.dot.gallery.generated.resources.nav_albums
 import com.dot.gallery.generated.resources.nav_timeline
+import kotlinx.coroutines.launch
 
 
 internal fun navigationRailSlideOffset(
@@ -350,6 +356,19 @@ fun AppBarContainer(
     // navigation bars below, not the whole app content. Previously content() was nested inside
     // both the useOldNavbar and !useOldNavbar AnimatedVisibility blocks, so flipping the setting
     // cross-faded (and recomposed) the entire screen, making it blink.
+    val profileDrawerState = rememberDrawerState(DrawerValue.Closed)
+    val profileDrawerScope = rememberCoroutineScope()
+    ModalNavigationDrawer(
+        drawerState = profileDrawerState,
+        gesturesEnabled = currentRoute == null || !isImmersiveRoute(currentRoute),
+        drawerContent = {
+            ProfileDrawerContent(
+                onProfileSelected = {
+                    profileDrawerScope.launch { profileDrawerState.close() }
+                }
+            )
+        }
+    ) {
     SharedTransitionLayout {
         CompositionLocalProvider(LocalViewerDismissBridge provides overlayDismissBridge) {
             Box(modifier = Modifier.fillMaxSize()) {
@@ -542,6 +561,7 @@ fun AppBarContainer(
                 ViewerDismissFlightLayer(overlayDismissBridge)
             }
         }
+    }
     }
 }
 
