@@ -37,20 +37,30 @@ jobs:
           yes | "$SDKMANAGER" --licenses >/dev/null
           "$SDKMANAGER" --install "cmake;3.31.6"
           test -x "$ANDROID_HOME/cmake/3.31.6/bin/cmake"
+      - name: Decode release keystore
+        uses: timheuer/base64-to-file@v1
+        with:
+          fileName: release_key.jks
+          fileDir: app/androidApp/
+          encodedString: ${{ secrets.SIGNING_KEY }}
       - uses: gradle/actions/setup-gradle@v4
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
-      - name: Build ARM64 NoML debug APK
-        run: ./gradlew --no-daemon :app:androidApp:assembleArm64-v8aNoMLDebug
+      - name: Build optimized ARM64 NoML release APK
+        run: ./gradlew --no-daemon :app:androidApp:assembleArm64-v8aNoMLRelease
+        env:
+          SIGNING_KEY_ALIAS: ${{ secrets.ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
       - name: Verify APK output
         run: |
           set -euo pipefail
-          find app/androidApp/build/outputs/apk -type f -name '*.apk' -print
-          test "$(find app/androidApp/build/outputs/apk -type f -name '*.apk' | wc -l)" -ge 1
+          find app/androidApp/build/outputs -type f -name '*.apk' -print
+          test "$(find app/androidApp/build/outputs -type f -name '*.apk' | wc -l)" -ge 1
       - name: Upload installable APK
         uses: actions/upload-artifact@v4
         with:
-          name: ReFraPro-arm64-NoML-debug
-          path: app/androidApp/build/outputs/apk/arm64-v8aNoML/debug/*.apk
+          name: ReFraPro-arm64-NoML-release
+          path: app/androidApp/build/outputs/**/*.apk
           if-no-files-found: error
           retention-days: 14
