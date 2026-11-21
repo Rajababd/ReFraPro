@@ -148,6 +148,10 @@ import java.io.IOException
 import com.dot.gallery.domain.model.EncryptedMedia2
 import com.dot.gallery.cloud.core.ProviderType
 import com.dot.gallery.domain.model.CollectionAlbum
+import com.dot.gallery.domain.model.Profile
+import com.dot.gallery.domain.model.ProfileAlbum
+import com.dot.gallery.domain.model.ProfileExcludedMedia
+import com.dot.gallery.domain.model.ProfileMedia
 import com.dot.gallery.core.util.ext.overrideImage
 import com.dot.gallery.core.util.or
 import com.dot.gallery.cloud.core.matches
@@ -2017,6 +2021,102 @@ class MediaRepositoryImpl(
 
     override fun getExcludedMediaIdsInCollection(collectionId: Long): Flow<List<Long>> =
         collectionDao.getExcludedMediaIds(collectionId)
+
+    // ============ Profiles ============
+
+    private val profileDao get() = database.getProfileDao()
+
+    override suspend fun insertProfile(profile: Profile): Long =
+        profileDao.insertProfile(profile)
+
+    override suspend fun updateProfile(profile: Profile) =
+        profileDao.updateProfile(profile.copy(updatedAt = kotlin.time.Clock.System.now().toEpochMilliseconds()))
+
+    override suspend fun deleteProfile(profileId: Long) {
+        require(profileId != Profile.ALL_PHOTOS_ID) { "The built-in All Photos profile cannot be deleted" }
+        profileDao.deleteProfile(profileId)
+    }
+
+    override fun getProfile(profileId: Long): Flow<Profile?> =
+        profileDao.getProfile(profileId)
+
+    override suspend fun getProfileAsync(profileId: Long): Profile? =
+        profileDao.getProfileAsync(profileId)
+
+    override fun getProfiles(): Flow<List<Profile>> =
+        profileDao.getProfiles()
+
+    override fun getProfileCount(): Flow<Int> =
+        profileDao.getProfileCount()
+
+    override suspend fun addMediaToProfile(profileId: Long, mediaId: Long) {
+        require(profileId != Profile.ALL_PHOTOS_ID) { "All Photos is a virtual profile" }
+        database.withWriteTransaction {
+            profileDao.addMedia(ProfileMedia(profileId, mediaId))
+            profileDao.clearExcludedMedia(profileId, mediaId)
+        }
+    }
+
+    override suspend fun addMediaListToProfile(profileId: Long, mediaIds: List<Long>) {
+        require(profileId != Profile.ALL_PHOTOS_ID) { "All Photos is a virtual profile" }
+        if (mediaIds.isEmpty()) return
+        database.withWriteTransaction {
+            profileDao.addMediaList(mediaIds.distinct().map { ProfileMedia(profileId, it) })
+            mediaIds.distinct().forEach { profileDao.clearExcludedMedia(profileId, it) }
+        }
+    }
+
+    override suspend fun removeMediaFromProfile(profileId: Long, mediaId: Long) {
+        require(profileId != Profile.ALL_PHOTOS_ID) { "All Photos is a virtual profile" }
+        database.withWriteTransaction {
+            profileDao.removeMedia(profileId, mediaId)
+            profileDao.excludeMedia(ProfileExcludedMedia(profileId, mediaId))
+        }
+    }
+
+    override fun getDirectProfileMediaIds(profileId: Long): Flow<List<Long>> =
+        profileDao.getDirectMediaIds(profileId)
+
+    override fun getProfileMediaIds(profileId: Long): Flow<List<Long>> =
+        profileDao.getProfileMediaIds(profileId)
+
+    override fun getProfileMediaCount(profileId: Long): Flow<Int> =
+        profileDao.getProfileMediaCount(profileId)
+
+    override suspend fun addAlbumsToProfile(profileId: Long, albumIds: List<Long>) {
+        require(profileId != Profile.ALL_PHOTOS_ID) { "All Photos is a virtual profile" }
+        if (albumIds.isEmpty()) return
+        profileDao.addAlbums(albumIds.distinct().map { ProfileAlbum(profileId, it) })
+    }
+
+    override suspend fun removeAlbumFromProfile(profileId: Long, albumId: Long) {
+        require(profileId != Profile.ALL_PHOTOS_ID) { "All Photos is a virtual profile" }
+        profileDao.removeAlbum(profileId, albumId)
+    }
+
+    override suspend fun replaceAlbumsInProfile(profileId: Long, albumIds: List<Long>) {
+        require(profileId != Profile.ALL_PHOTOS_ID) { "All Photos is a virtual profile" }
+        profileDao.replaceAlbums(profileId, albumIds)
+    }
+
+    override fun getAlbumIdsInProfile(profileId: Long): Flow<List<Long>> =
+        profileDao.getAlbumIds(profileId)
+
+    override fun getExcludedMediaIdsInProfile(profileId: Long): Flow<List<Long>> =
+        profileDao.getExcludedMediaIds(profileId)
+
+    override suspend fun excludeMediaFromProfile(profileId: Long, mediaId: Long) {
+        require(profileId != Profile.ALL_PHOTOS_ID) { "All Photos is a virtual profile" }
+        database.withWriteTransaction {
+            profileDao.removeMedia(profileId, mediaId)
+            profileDao.excludeMedia(ProfileExcludedMedia(profileId, mediaId))
+        }
+    }
+
+    override suspend fun clearMediaExclusionFromProfile(profileId: Long, mediaId: Long) {
+        require(profileId != Profile.ALL_PHOTOS_ID) { "All Photos is a virtual profile" }
+        profileDao.clearExcludedMedia(profileId, mediaId)
+    }
 
     // ============ Album Sections ============
 
