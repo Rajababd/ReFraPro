@@ -104,7 +104,7 @@
 
         <activity-alias
             android:name="com.dot.gallery.Launcher_ReFra"
-            android:label="@string/app_name"
+            android:label="ReFraPro"
             android:icon="@mipmap/ic_launcher"
             android:roundIcon="@mipmap/ic_launcher_round"
             android:targetActivity="com.dot.gallery.app.presentation.main.MainActivity"
@@ -141,7 +141,7 @@
         <!-- App name "ReFra" with the legacy Gallery launcher logo -->
         <activity-alias
             android:name="com.dot.gallery.Launcher_ReFra_GalleryLogo"
-            android:label="@string/app_name"
+            android:label="ReFraPro"
             android:icon="@mipmap/ic_launcher_gallery"
             android:roundIcon="@mipmap/ic_launcher_gallery_round"
             android:targetActivity="com.dot.gallery.app.presentation.main.MainActivity"
@@ -179,7 +179,7 @@
         <!-- App name "ReFra" with the monochrome launcher logo -->
         <activity-alias
             android:name="com.dot.gallery.Launcher_ReFra_Mono"
-            android:label="@string/app_name"
+            android:label="ReFraPro"
             android:icon="@mipmap/ic_launcher_mono"
             android:roundIcon="@mipmap/ic_launcher_mono_round"
             android:targetActivity="com.dot.gallery.app.presentation.main.MainActivity"
@@ -217,7 +217,7 @@
         <!-- App name "ReFra" with the monochrome Gallery launcher logo -->
         <activity-alias
             android:name="com.dot.gallery.Launcher_ReFra_GalleryMono"
-            android:label="@string/app_name"
+            android:label="ReFraPro"
             android:icon="@mipmap/ic_launcher_gallery_mono"
             android:roundIcon="@mipmap/ic_launcher_gallery_mono_round"
             android:targetActivity="com.dot.gallery.app.presentation.main.MainActivity"
@@ -294,7 +294,7 @@
             android:taskAffinity=""
             android:configChanges="orientation|keyboard|keyboardHidden|screenSize|screenLayout|smallestScreenSize|uiMode"
             android:theme="@style/Theme.Gallery">
-            <intent-filter android:label="@string/app_name">
+            <intent-filter android:label="ReFraPro">
                 <action android:name="android.intent.action.VIEW" />
                 <action android:name="com.android.camera.action.REVIEW" />
                 <action android:name="android.provider.action.REVIEW" />
@@ -367,7 +367,7 @@
             android:turnScreenOn="true"
             android:configChanges="orientation|keyboard|keyboardHidden|screenSize|screenLayout|smallestScreenSize|uiMode"
             android:theme="@style/Theme.Gallery">
-            <intent-filter android:label="@string/app_name">
+            <intent-filter android:label="ReFraPro">
                 <action android:name="android.provider.action.REVIEW_SECURE" />
 
                 <data android:scheme="content"/>
@@ -384,7 +384,7 @@
             android:exported="true"
             android:configChanges="orientation|keyboard|keyboardHidden|screenSize|screenLayout|smallestScreenSize|uiMode"
             android:theme="@style/Theme.Gallery">
-            <intent-filter android:label="@string/app_name">
+            <intent-filter android:label="ReFraPro">
                 <action android:name="android.intent.action.PICK"/>
                 <action android:name="android.intent.action.GET_CONTENT"/>
 
@@ -424,7 +424,7 @@
             tools:ignore="DiscouragedApi"
             android:launchMode="singleTop"
             android:exported="true">
-            <intent-filter android:label="@string/app_name">
+            <intent-filter android:label="ReFraPro">
                 <action android:name="android.intent.action.EDIT"/>
 
                 <category android:name="android.intent.category.DEFAULT"/>
