@@ -1079,4 +1079,10 @@
     <string name="profile_remove_media">إزالة من البروفايل</string>
     <string name="profile_add_album">إضافة الألبوم إلى بروفايل</string>
     <string name="profile_remove_album">إزالة الألبوم من البروفايل</string>
+    <string name="profile_all_photos">كل الصور</string>
+    <string name="profile_add">إضافة بروفايل</string>
+    <string name="profile_create_title">إنشاء بروفايل</string>
+    <string name="profile_name_hint">اسم البروفايل</string>
+    <string name="profile_create">إنشاء</string>
+    <string name="profile_cancel">إلغاء</string>
 </resources>
