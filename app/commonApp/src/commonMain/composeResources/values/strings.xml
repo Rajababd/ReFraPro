@@ -1136,5 +1136,8 @@
     <string name="handover_status_down">Check the server URL and your network connection.</string>
     <string name="handover_enabled_summary">Server-side inference and search are on</string>
     <string name="handover_disabled_summary">Run search inference on your own server</string>
+    <string name="profile_select_target">Choose a profile</string>
+    <string name="profile_add_media">Add to profile</string>
+    <string name="profile_remove_media">Remove from profile</string>
 </resources>
 
