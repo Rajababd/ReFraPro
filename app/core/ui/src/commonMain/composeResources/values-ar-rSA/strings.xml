@@ -167,10 +167,4 @@
         <item quantity="one">%2$s، %3$s و%1$d المزيد</item>
         <item quantity="other">%2$s، %3$s و%1$d المزيد</item>
     </plurals>
-    <string name="profile_all_photos">كل الصور</string>
-    <string name="profile_add">إضافة بروفايل</string>
-    <string name="profile_create_title">إنشاء بروفايل</string>
-    <string name="profile_name_hint">اسم البروفايل</string>
-    <string name="profile_create">إنشاء</string>
-    <string name="profile_cancel">إلغاء</string>
 </resources>
