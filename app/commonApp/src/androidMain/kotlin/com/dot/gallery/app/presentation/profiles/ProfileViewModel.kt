@@ -60,6 +60,34 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    fun addMediaListToProfile(profileId: Long, mediaIds: List<Long>) {
+        if (profileId == Profile.ALL_PHOTOS_ID || mediaIds.isEmpty()) return
+        viewModelScope.launch {
+            repository.addMediaListToProfile(profileId, mediaIds)
+        }
+    }
+
+    fun removeMediaListFromProfile(profileId: Long, mediaIds: List<Long>) {
+        if (profileId == Profile.ALL_PHOTOS_ID || mediaIds.isEmpty()) return
+        viewModelScope.launch {
+            mediaIds.distinct().forEach { repository.removeMediaFromProfile(profileId, it) }
+        }
+    }
+
+    fun addAlbumsToProfile(profileId: Long, albumIds: List<Long>) {
+        if (profileId == Profile.ALL_PHOTOS_ID || albumIds.isEmpty()) return
+        viewModelScope.launch {
+            repository.addAlbumsToProfile(profileId, albumIds)
+        }
+    }
+
+    fun removeAlbumFromProfile(profileId: Long, albumId: Long) {
+        if (profileId == Profile.ALL_PHOTOS_ID) return
+        viewModelScope.launch {
+            repository.removeAlbumFromProfile(profileId, albumId)
+        }
+    }
+
     fun renameProfile(profileId: Long, name: String) {
         val normalized = name.trim()
         if (normalized.isEmpty() || profileId == Profile.ALL_PHOTOS_ID) return
