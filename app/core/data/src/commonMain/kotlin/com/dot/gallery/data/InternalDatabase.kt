@@ -50,6 +50,10 @@ import com.dot.gallery.domain.model.Category
 import com.dot.gallery.domain.model.Collection
 import com.dot.gallery.domain.model.CollectionAlbum
 import com.dot.gallery.domain.model.CollectionExcludedMedia
+import com.dot.gallery.domain.model.Profile
+import com.dot.gallery.domain.model.ProfileAlbum
+import com.dot.gallery.domain.model.ProfileMedia
+import com.dot.gallery.domain.model.ProfileExcludedMedia
 import com.dot.gallery.domain.model.CollectionMedia
 import com.dot.gallery.domain.model.EditedMedia
 import com.dot.gallery.domain.model.IgnoredAlbum
@@ -76,6 +80,7 @@ import com.dot.gallery.data.dao.BlacklistDao
 import com.dot.gallery.data.dao.CategoryDao
 import com.dot.gallery.data.dao.ClassifierDao
 import com.dot.gallery.data.dao.CollectionDao
+import com.dot.gallery.data.dao.ProfileDao
 import com.dot.gallery.data.dao.EditHistoryDao
 import com.dot.gallery.data.dao.ImageEmbeddingDao
 import com.dot.gallery.data.dao.LockedAlbumDao
@@ -120,6 +125,10 @@ import com.dot.gallery.data.Converters
         CollectionMedia::class,
         CollectionAlbum::class,
         CollectionExcludedMedia::class,
+        Profile::class,
+        ProfileMedia::class,
+        ProfileAlbum::class,
+        ProfileExcludedMedia::class,
         ScannedMedia::class,
         CloudMediaEntity::class,
         CloudBackupRevisionEntity::class,
@@ -145,7 +154,7 @@ import com.dot.gallery.data.Converters
         CloudTagEntity::class,
         CloudMediaTagEntity::class
     ],
-    version = 56,
+    version = 57,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
@@ -207,6 +216,7 @@ import com.dot.gallery.data.Converters
         // (selectable search engines: purge foreign-dimension embeddings, normalize thresholds)
         AutoMigration(from = 54, to = 55), // collection_excluded_media
         AutoMigration(from = 55, to = 56), // categories.coverMediaId (user-picked category cover)
+        AutoMigration(from = 56, to = 57), // profile membership and exclusion tables
     ]
 )
 @ColumnTypeConverters(Converters::class, CloudConverters::class, SmartScanConverters::class)
@@ -244,6 +254,8 @@ abstract class InternalDatabase : RoomDatabase() {
     abstract fun getMergedSubfolderDao(): MergedSubfolderDao
 
     abstract fun getCollectionDao(): CollectionDao
+
+    abstract fun getProfileDao(): ProfileDao
 
     abstract fun getScannedMediaDao(): ScannedMediaDao
 
