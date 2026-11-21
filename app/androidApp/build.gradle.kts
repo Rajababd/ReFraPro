@@ -286,11 +286,11 @@ android {
             isShrinkResources = false
             applicationIdSuffix = ".staging"
             versionNameSuffix = "-staging"
-            manifestPlaceholders["appProvider"] = "com.rajababd.refrapro.staging.debug.media_provider"
+            manifestPlaceholders["appProvider"] = "com.rajababd.refrapro.staging.media_provider"
             buildConfigField(
                 "String",
                 "CONTENT_AUTHORITY",
-                "\"com.rajababd.refrapro.staging.debug.media_provider\""
+                "\"com.rajababd.refrapro.staging.media_provider\""
             )
             buildConfigField("Boolean", "ALLOW_ALL_FILES_ACCESS", "$allowAllFilesAccess")
             buildConfigField("Boolean", "ENABLE_INDEXING", "true")
