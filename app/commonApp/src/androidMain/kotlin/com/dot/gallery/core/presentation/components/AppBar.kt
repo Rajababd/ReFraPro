@@ -54,6 +54,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Photo
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.rememberDrawerState
@@ -208,6 +209,7 @@ fun rememberNavigationItems(): List<NavigationItem> {
 const val AppBarOverlayContentTag = "AppBarContainer.Overlay"
 
 @OptIn(
+    ExperimentalMaterial3Api::class,
     ExperimentalMaterial3WindowSizeClassApi::class,
     ExperimentalSharedTransitionApi::class,
     ExperimentalDeferredTransitionApi::class,
