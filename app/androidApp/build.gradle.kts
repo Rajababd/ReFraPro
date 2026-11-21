@@ -279,6 +279,23 @@ android {
             buildConfigField("Boolean", "ENABLE_INDEXING", "true")
             buildConfigField("Boolean", "ALLOW_INSECURE_TLS", "true")
         }
+        // Minified, resource-shrunk test build that can be produced without private
+        // release-signing secrets. It inherits release optimization and uses the
+        // CI debug key only for installation/testing.
+        create("optimized") {
+            initWith(getByName("release"))
+            matchingFallbacks += "release"
+            applicationIdSuffix = ".optimized"
+            versionNameSuffix = "-optimized"
+            manifestPlaceholders["appProvider"] =
+                "com.rajababd.refrapro.optimized.media_provider"
+            buildConfigField(
+                "String",
+                "CONTENT_AUTHORITY",
+                "\\"com.rajababd.refrapro.optimized.media_provider\\""
+            )
+            signingConfig = signingConfigs.getByName("debug")
+        }
         create("staging") {
             initWith(getByName("release"))
             matchingFallbacks += "release"
