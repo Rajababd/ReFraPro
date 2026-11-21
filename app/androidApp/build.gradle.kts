@@ -358,6 +358,11 @@ android {
         buildConfig = true
     }
     packaging {
+        jniLibs {
+            // Compress native libraries inside the APK. Android extracts them at
+            // install time; this materially reduces the downloadable APK size.
+            useLegacyPackaging = true
+        }
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
