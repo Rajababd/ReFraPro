@@ -460,26 +460,25 @@ fun AlbumTimelineScreen(
                         )
                     }
                 }
-                add {
-                    GalleryPageTopBarAction(
-                        icon = Icons.Outlined.PhotoLibrary,
-                        contentDescription = stringResource(
-                            if (activeProfileId == 0L) Res.string.profile_add_album
-                            else Res.string.profile_remove_album
-                        ),
-                        onClick = {
-                            if (activeProfileId == 0L) {
-                                showProfileTargetSheet = true
-                            } else {
-                                profileViewModel.removeAlbumFromProfile(activeProfileId, profileAlbumIds.first())
-                                if (profileAlbumIds.size > 1) {
-                                    profileAlbumIds.drop(1).forEach {
+                if (currentAlbum != null && currentAlbum.cloudIdentity == null) {
+                    add {
+                        GalleryPageTopBarAction(
+                            icon = Icons.Outlined.PhotoLibrary,
+                            contentDescription = stringResource(
+                                if (activeProfileId == 0L) Res.string.profile_add_album
+                                else Res.string.profile_remove_album
+                            ),
+                            onClick = {
+                                if (activeProfileId == 0L) {
+                                    showProfileTargetSheet = true
+                                } else {
+                                    profileAlbumIds.forEach {
                                         profileViewModel.removeAlbumFromProfile(activeProfileId, it)
                                     }
                                 }
-                            }
-                        },
-                    )
+                            },
+                        )
+                    }
                 }
                 add {
                     AlbumSortTopBarAction(
