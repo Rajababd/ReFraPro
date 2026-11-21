@@ -49,6 +49,7 @@ import androidx.compose.material.icons.outlined.Deselect
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.SelectAll
+import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -130,6 +131,8 @@ import com.dot.gallery.core.presentation.util.clear
 import com.dot.gallery.core.presentation.util.selectedMedia
 import com.dot.gallery.cloud.ui.CloudSelectionViewModel
 import com.dot.gallery.feature.albums.ui.collections.CollectionViewModel
+import com.dot.gallery.app.presentation.profiles.ProfileViewModel
+import com.dot.gallery.app.presentation.profiles.ProfileTargetSheet
 import com.dot.gallery.feature.vault.privatefolder.PrivateFolderMoveViewModel
 import com.dot.gallery.feature.vault.VaultViewModel
 import com.dot.gallery.core.Settings.Misc.rememberAllowBlur
@@ -180,6 +183,8 @@ import com.dot.gallery.generated.resources.private_folder_move_out_failed
 import com.dot.gallery.generated.resources.private_folder_moving
 import com.dot.gallery.generated.resources.private_folder_moving_out
 import com.dot.gallery.generated.resources.remove_from_collection
+import com.dot.gallery.generated.resources.profile_add_media
+import com.dot.gallery.generated.resources.profile_remove_media
 import com.dot.gallery.generated.resources.select_all
 import com.dot.gallery.generated.resources.selection_dialog_close_cd
 import com.dot.gallery.generated.resources.trash
@@ -243,7 +248,11 @@ fun <T : Media> BoxScope.SelectionSheet(
     val moveSheetState = rememberAppBottomSheetState()
     val copySheetState = rememberAppBottomSheetState()
     var showCollectionSheet by rememberSaveable { mutableStateOf(false) }
+    var showProfileTargetSheet by rememberSaveable { mutableStateOf(false) }
     val collectionViewModel = injectViewModel<CollectionViewModel> {collectionViewModel}
+    val profileViewModel = injectViewModel<ProfileViewModel> { profileViewModel }
+    val profileItems by profileViewModel.profiles.collectAsStateWithLifecycle()
+    val activeProfileId by profileViewModel.activeProfileId.collectAsStateWithLifecycle()
     val vaultViewModel = injectViewModel<VaultViewModel> {vaultViewModel}
     val vaultSheetState = rememberAppBottomSheetState()
     val vaultDeleteConfirmState = rememberAppBottomSheetState()
@@ -968,6 +977,28 @@ fun <T : Media> BoxScope.SelectionSheet(
                     }
                 }
             }
+            if (!isInVault && !isInPrivateFolder && selectedMedia.isNotEmpty()) {
+                val isAllPhotos = activeProfileId == 0L
+                MiddleActionButton(
+                    icon = Icons.Outlined.PhotoLibrary,
+                    text = stringResource(
+                        if (isAllPhotos) Res.string.profile_add_media
+                        else Res.string.profile_remove_media
+                    ),
+                    surfaceColor = surfaceColor,
+                    onClick = {
+                        if (isAllPhotos) {
+                            showProfileTargetSheet = true
+                        } else {
+                            profileViewModel.removeMediaListFromProfile(
+                                activeProfileId,
+                                selectedMedia.map { it.id }
+                            )
+                            selector.clearSelection()
+                        }
+                    }
+                )
+            }
             Row(
                 modifier = Modifier
                     .then(sizeModifier)
@@ -1358,6 +1389,20 @@ fun <T : Media> BoxScope.SelectionSheet(
                     }
                 }
             }
+        }
+    )
+
+    ProfileTargetSheet(
+        visible = showProfileTargetSheet,
+        profiles = profileItems,
+        onDismiss = { showProfileTargetSheet = false },
+        onProfileSelected = { profileId ->
+            profileViewModel.addMediaListToProfile(
+                profileId,
+                selectedMedia.map { it.id }
+            )
+            showProfileTargetSheet = false
+            selector.clearSelection()
         }
     )
 
