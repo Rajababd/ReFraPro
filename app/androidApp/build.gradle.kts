@@ -292,7 +292,7 @@ android {
             buildConfigField(
                 "String",
                 "CONTENT_AUTHORITY",
-                "\\"com.rajababd.refrapro.optimized.media_provider\\""
+                "\"com.rajababd.refrapro.optimized.media_provider\""
             )
             signingConfig = signingConfigs.getByName("debug")
         }
