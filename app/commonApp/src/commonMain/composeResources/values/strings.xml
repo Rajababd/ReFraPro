@@ -1141,5 +1141,11 @@
     <string name="profile_remove_media">Remove from profile</string>
     <string name="profile_add_album">Add album to profile</string>
     <string name="profile_remove_album">Remove album from profile</string>
+    <string name="profile_all_photos">All Photos</string>
+    <string name="profile_add">Add profile</string>
+    <string name="profile_create_title">Create profile</string>
+    <string name="profile_name_hint">Profile name</string>
+    <string name="profile_create">Create</string>
+    <string name="profile_cancel">Cancel</string>
 </resources>
 
