@@ -37,21 +37,11 @@ jobs:
           yes | "$SDKMANAGER" --licenses >/dev/null
           "$SDKMANAGER" --install "cmake;3.31.6"
           test -x "$ANDROID_HOME/cmake/3.31.6/bin/cmake"
-      - name: Decode release keystore
-        uses: timheuer/base64-to-file@v1
-        with:
-          fileName: release_key.jks
-          fileDir: app/androidApp/
-          encodedString: ${{ secrets.SIGNING_KEY }}
       - uses: gradle/actions/setup-gradle@v4
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
-      - name: Build optimized ARM64 NoML release APK
-        run: ./gradlew --no-daemon :app:androidApp:assembleArm64-v8aNoMLRelease
-        env:
-          SIGNING_KEY_ALIAS: ${{ secrets.ALIAS }}
-          SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          SIGNING_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+      - name: Build optimized ARM64 NoML APK
+        run: ./gradlew --no-daemon :app:androidApp:assembleArm64-v8aNoMLOptimized
       - name: Verify APK output
         run: |
           set -euo pipefail
@@ -60,7 +50,7 @@ jobs:
       - name: Upload installable APK
         uses: actions/upload-artifact@v4
         with:
-          name: ReFraPro-arm64-NoML-release
+          name: ReFraPro-arm64-NoML-optimized
           path: app/androidApp/build/outputs/**/*.apk
           if-no-files-found: error
           retention-days: 14
