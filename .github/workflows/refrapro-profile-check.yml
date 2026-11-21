@@ -1,4 +1,4 @@
-name: ReFraPro Profile Build APK
+name: ReFraPro Optimized ARM64 APK
 
 on:
   push:
@@ -40,8 +40,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
-      - name: Build universal NoML debug APK
-        run: ./gradlew --no-daemon :app:androidApp:assembleUniversalNoMLDebug
+      - name: Build ARM64 NoML debug APK
+        run: ./gradlew --no-daemon :app:androidApp:assembleArm64-v8aNoMLDebug
       - name: Verify APK output
         run: |
           set -euo pipefail
@@ -50,7 +50,7 @@ jobs:
       - name: Upload installable APK
         uses: actions/upload-artifact@v4
         with:
-          name: ReFraPro-universal-NoML-debug
-          path: app/androidApp/build/outputs/apk/universalNoML/debug/*.apk
+          name: ReFraPro-arm64-NoML-debug
+          path: app/androidApp/build/outputs/apk/arm64-v8aNoML/debug/*.apk
           if-no-files-found: error
           retention-days: 14
