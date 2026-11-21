@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.media.MediaScannerConnection
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import com.dot.gallery.core.work.isFinished
 import dev.brewkits.kmpworkmanager.background.domain.TaskEventBus
 import com.dot.gallery.core.presentation.components.FilterKind
@@ -30,6 +31,7 @@ import com.dot.gallery.core.presentation.components.MediaTypeAlbum
 import com.dot.gallery.domain.model.LockedAlbum
 import com.dot.gallery.domain.model.MergedSubfolderAlbum
 import com.dot.gallery.domain.model.PinnedAlbum
+import com.dot.gallery.domain.model.Profile
 import com.dot.gallery.domain.model.TimelineDateSource
 import com.dot.gallery.domain.model.TimelineSettings
 import com.dot.gallery.domain.model.UIEvent
@@ -217,6 +219,22 @@ class MediaDistributorImpl @Inject constructor(
     private val prioritySharingMethod = SharingStarted.Eagerly
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /** Null means the virtual All Photos profile; otherwise this is the selected profile's membership. */
+    private val activeProfileIdFlow = context.activeDataStore.data
+        .map { it[longPreferencesKey("active_profile_id")] ?: Profile.ALL_PHOTOS_ID }
+        .distinctUntilChanged()
+        .stateIn(appScope, SharingStarted.Eagerly, Profile.ALL_PHOTOS_ID)
+
+    private val profileMediaIdsFlow: Flow<Set<Long>?> = activeProfileIdFlow.flatMapLatest { profileId ->
+        if (profileId == Profile.ALL_PHOTOS_ID) flowOf(null)
+        else repository.getProfileMediaIds(profileId).map { it.toSet() }
+    }
+
+    private val profileAlbumIdsFlow: Flow<Set<Long>?> = activeProfileIdFlow.flatMapLatest { profileId ->
+        if (profileId == Profile.ALL_PHOTOS_ID) flowOf(null)
+        else repository.getAlbumIdsInProfile(profileId).map { it.toSet() }
+    }
 
     /**
      * Tracks media IDs that have already been submitted for a MediaStore rescan
@@ -934,6 +952,7 @@ class MediaDistributorImpl @Inject constructor(
                 .onEach { StartupTracer.begin("albums.dep.sectionMembers(${it.size})").also { s -> StartupTracer.end(s) } },
             sectionsEnabled
                 .onEach { StartupTracer.begin("albums.dep.sectionsEnabled=$it").also { s -> StartupTracer.end(s) } },
+            profileAlbumIdsFlow,
         ) { values ->
             @Suppress("UNCHECKED_CAST")
             val result = values[0] as Resource<List<Album>>?
@@ -971,6 +990,8 @@ class MediaDistributorImpl @Inject constructor(
             @Suppress("UNCHECKED_CAST")
             val sectionMembers = values[15] as List<AlbumSectionMember>
             val areSectionsEnabled = values[16] as Boolean
+            @Suppress("UNCHECKED_CAST")
+            val profileAlbumIds = values[17] as Set<Long>?
             val newOrder = settings.albumMediaOrder
             val thumbnailMap = thumbnails.associateBy { it.albumId }
             val localAlbums = newOrder.sortAlbums(result.data ?: emptyList()).map { album ->
@@ -991,8 +1012,16 @@ class MediaDistributorImpl @Inject constructor(
             // albumsWithBlacklisted (data) so the ignored screen can still resolve them.
             val allRemoteAlbums = cloudAlbums.map { it.toAlbum() } + unsortedCloudAlbums
             val remoteAlbums = allRemoteAlbums.removeBlacklisted(blacklistedAlbums)
-            val mergedData = mergedLocalAlbums + remoteAlbums
-            val data = localAlbums + allRemoteAlbums
+            val mergedData = (mergedLocalAlbums + remoteAlbums).let { albums ->
+                profileAlbumIds?.let { ids ->
+                    albums.filter { album -> album.id in ids || album.sourceAlbumIds.any(ids::contains) }
+                } ?: albums
+            }
+            val data = (localAlbums + allRemoteAlbums).let { albums ->
+                profileAlbumIds?.let { ids ->
+                    albums.filter { album -> album.id in ids || album.sourceAlbumIds.any(ids::contains) }
+                } ?: albums
+            }
 
             val groupMemberAlbumIds = groupMembers.mapTo(HashSet(groupMembers.size)) { it.albumId }
             val membersByGroupId = groupMembers.groupBy { it.groupId }
@@ -1350,6 +1379,7 @@ class MediaDistributorImpl @Inject constructor(
             _cloudAlbumsFlow,
             _cloudAlbumMembers,
             timelineDateHeaders,
+            profileMediaIdsFlow,
         ) { values ->
             combineEmissionCount++
             val combineSpan = StartupTracer.begin("$tag.combine_body(#$combineEmissionCount)")
@@ -1377,6 +1407,8 @@ class MediaDistributorImpl @Inject constructor(
             val timelineDateHeadersEnabled = values[12] as Boolean
             @Suppress("UNCHECKED_CAST")
             val cloudAlbumMembers = values[11] as Map<CloudAlbumMemberId, Set<CloudAlbumMemberId>>
+            @Suppress("UNCHECKED_CAST")
+            val profileMediaIds = values[13] as Set<Long>?
             
             val (defaultDateFormat, extendedDateFormat, weeklyDateFormat) = dateFormats
             
@@ -1401,6 +1433,9 @@ class MediaDistributorImpl @Inject constructor(
                 if (isMainTimeline) {
                     removeAll { media -> media.albumID in lockedAlbumIds }
                 }
+                if (profileMediaIds != null && !isTrash) {
+                    removeAll { media -> media.id !in profileMediaIds }
+                }
             }
             // Merge cloud media into the unified timeline. When CLOUD_LOCAL is enabled a cloud
             // copy that matches a local item (by base filename) is NOT added as its own tile;
@@ -1416,9 +1451,12 @@ class MediaDistributorImpl @Inject constructor(
                 val hidePredicate = hiddenCloudMediaPredicate(
                     blacklistedAlbums, cloudAlbums, cloudAlbumMembers
                 )
-                val visibleCloudMedia = hidePredicate?.let { hidden ->
+                val visibleCloudMedia = (hidePredicate?.let { hidden ->
                     cloudMedia.filterNot { m -> cloudMemberKey(m.uri.toString())?.let(hidden) == true }
-                } ?: cloudMedia
+                } ?: cloudMedia).let { items ->
+                    if (profileMediaIds == null || isTrash) items
+                    else items.filter { it.id in profileMediaIds }
+                }
                 if (MediaGroupType.CLOUD_LOCAL in groupTypes) {
                     val localByBasename = HashMap<String, Long>(data.size)
                     for (m in data) {
