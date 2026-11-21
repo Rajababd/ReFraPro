@@ -146,6 +146,7 @@ import com.dot.gallery.feature.classifier.CategoriesViewModel
 import com.dot.gallery.feature.classifier.CategoryEditorViewModel
 import com.dot.gallery.feature.classifier.CategoryViewModel
 import com.dot.gallery.feature.albums.ui.collections.CollectionViewModel
+import com.dot.gallery.app.presentation.profiles.ProfileViewModel
 import com.dot.gallery.feature.editor.EditRuntime
 import com.dot.gallery.feature.editor.EditViewModel
 import com.dot.gallery.feature.exif.CopyMediaRuntime
@@ -681,6 +682,7 @@ abstract class AppComponent(
     abstract val cloudSelectionViewModel: CloudSelectionViewModel
     abstract val cloudSettingsViewModel: CloudSettingsViewModel
     abstract val collectionViewModel: CollectionViewModel
+    abstract val profileViewModel: ProfileViewModel
     abstract val developerViewModel: DeveloperViewModel
     abstract val editBackupsViewModel: EditBackupsViewModel
     abstract val handoverSettingsViewModel: HandoverSettingsViewModel
