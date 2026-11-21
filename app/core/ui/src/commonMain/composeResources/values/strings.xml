@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ReFra</string>
+    <string name="app_name">ReFraPro</string>
     <string name="app_dev">by %1$s</string>
     <string name="app_dev_name">IacobIonut01</string>
     <string name="version_build_format">v%1$s (%2$d)</string>
