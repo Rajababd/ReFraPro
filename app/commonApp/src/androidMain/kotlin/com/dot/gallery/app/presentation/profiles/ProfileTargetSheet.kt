@@ -20,6 +20,7 @@ import com.dot.gallery.core.presentation.components.ExpressiveSheetShape
 import com.dot.gallery.core.presentation.components.SheetHeader
 import com.dot.gallery.core.presentation.components.SheetOptionRow
 import com.dot.gallery.core.presentation.components.SheetRowTrailing
+import com.dot.gallery.core.presentation.components.sheetRowPosition
 import com.dot.gallery.domain.model.Profile
 import com.dot.gallery.generated.resources.Res
 import com.dot.gallery.generated.resources.profile_select_target
@@ -47,12 +48,7 @@ fun ProfileTargetSheet(
                 SheetOptionRow(
                     title = profile.name,
                     summary = null,
-                    position = when {
-                        profiles.size == 1 -> com.dot.gallery.core.presentation.components.SheetRowPosition.Only
-                        index == 0 -> com.dot.gallery.core.presentation.components.SheetRowPosition.First
-                        index == profiles.lastIndex -> com.dot.gallery.core.presentation.components.SheetRowPosition.Last
-                        else -> com.dot.gallery.core.presentation.components.SheetRowPosition.Middle
-                    },
+                    position = sheetRowPosition(index, profiles.size),
                     leading = {
                         Icon(
                             imageVector = Icons.Outlined.PhotoLibrary,
