@@ -487,7 +487,16 @@ val isOffline: Boolean
     }
 
 val includeMaps: Boolean
-    get() = !isOffline
+    get() {
+        val fl = rootProject.file("app.properties")
+        return try {
+            val properties = Properties()
+            properties.load(FileInputStream(fl))
+            properties.getProperty("INCLUDE_MAPS", (!isOffline).toString()).toBoolean()
+        } catch (_: Exception) {
+            !isOffline
+        }
+    }
 
 // The CARTO basemap key is a public client-side token: it ships inside the APK and is
 // sent in tile URL queries. Keeping a copy in the repo (app.properties) makes the
