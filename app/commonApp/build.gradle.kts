@@ -222,11 +222,10 @@ kotlin {
 // Conditional source sets mirrored from the old app module — provider code lives
 // in sibling src/<name>/kotlin dirs, gated by app.properties.
 kotlin.sourceSets.getByName("androidMain").kotlin.apply {
-    if (!isOffline) {
-        srcDir("src/maps/kotlin")
+    if (includeMaps) srcDir("src/maps/kotlin") else srcDir("src/offline/kotlin")
+    if (includeImmich || includeOwncloud || includeNextcloud || includeWebdav || includeSmb || includeNfs) {
         srcDir("src/cloud/kotlin")
     } else {
-        srcDir("src/offline/kotlin")
         srcDir("src/nocloud/kotlin")
     }
     if (includeImmich) srcDir("src/immich/kotlin") else srcDir("src/noimmich/kotlin")
@@ -348,7 +347,16 @@ val isOffline: Boolean
     }
 
 val includeMaps: Boolean
-    get() = !isOffline
+    get() {
+        val fl = rootProject.file("app.properties")
+        return try {
+            val properties = Properties()
+            properties.load(FileInputStream(fl))
+            properties.getProperty("INCLUDE_MAPS", (!isOffline).toString()).toBoolean()
+        } catch (_: Exception) {
+            !isOffline
+        }
+    }
 
 // The CARTO basemap key is a public client-side token: it ships inside the APK and is
 // sent in tile URL queries. Keeping a copy in the repo (app.properties) makes the
