@@ -42,6 +42,8 @@ jobs:
         run: chmod +x ./gradlew
       - name: Build optimized ARM64 NoML APK
         run: ./gradlew --no-daemon :app:androidApp:assembleArm64-v8aNoMLOptimized
+      - name: Build unminified ARM64 NoML diagnostic APK
+        run: ./gradlew --no-daemon :app:androidApp:assembleArm64-v8aNoMLStaging
       - name: Verify APK output
         run: |
           set -euo pipefail
@@ -50,7 +52,7 @@ jobs:
       - name: Upload installable APK
         uses: actions/upload-artifact@v4
         with:
-          name: ReFraPro-arm64-NoML-optimized
+          name: ReFraPro-arm64-NoML-optimized-and-staging
           path: app/androidApp/build/outputs/**/*.apk
           if-no-files-found: error
           retention-days: 14
