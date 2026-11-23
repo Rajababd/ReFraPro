@@ -1,0 +1,5 @@
+<resources>
+    <string name="profile_album_selector_title">Add albums to profile</string>
+    <string name="profile_album_selector_save">Save selection</string>
+    <string name="profile_album_selector_count">%1$d items</string>
+</resources>
