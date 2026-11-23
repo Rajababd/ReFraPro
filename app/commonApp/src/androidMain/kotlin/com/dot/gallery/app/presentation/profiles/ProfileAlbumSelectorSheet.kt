@@ -28,9 +28,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.dot.gallery.domain.model.Album
 import com.dot.gallery.generated.resources.Res
-import com.dot.gallery.generated.resources.profile_add_album
+import com.dot.gallery.generated.resources.profile_album_selector_title
+import com.dot.gallery.generated.resources.profile_album_selector_count
 import com.dot.gallery.generated.resources.profile_cancel
-import com.dot.gallery.generated.resources.profile_save
+import com.dot.gallery.generated.resources.profile_album_selector_save
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -53,7 +54,7 @@ fun ProfileAlbumSelectorSheet(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = stringResource(Res.string.profile_add_album),
+                text = stringResource(Res.string.profile_album_selector_title),
                 style = MaterialTheme.typography.titleLarge,
             )
             Text(
@@ -79,7 +80,7 @@ fun ProfileAlbumSelectorSheet(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(album.label, style = MaterialTheme.typography.bodyLarge)
                             Text(
-                                text = "${album.count} items",
+                                text = stringResource(Res.string.profile_album_selector_count, album.count),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -105,7 +106,7 @@ fun ProfileAlbumSelectorSheet(
                     onClick = { onSave(selectedIds.toList()) },
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text(stringResource(Res.string.profile_save))
+                    Text(stringResource(Res.string.profile_album_selector_save))
                 }
             }
         }
