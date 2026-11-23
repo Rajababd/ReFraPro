@@ -81,6 +81,15 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    fun albumIdsInProfile(profileId: Long) = repository.getAlbumIdsInProfile(profileId)
+
+    fun replaceAlbumsInProfile(profileId: Long, albumIds: List<Long>) {
+        if (profileId == Profile.ALL_PHOTOS_ID) return
+        viewModelScope.launch {
+            repository.replaceAlbumsInProfile(profileId, albumIds.distinct())
+        }
+    }
+
     fun removeAlbumFromProfile(profileId: Long, albumId: Long) {
         if (profileId == Profile.ALL_PHOTOS_ID) return
         viewModelScope.launch {
