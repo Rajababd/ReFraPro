@@ -36,14 +36,15 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ProfileAlbumSelectorSheet(
+    profileId: Long,
     profileName: String,
     albums: List<Album>,
     initiallySelectedAlbumIds: List<Long>,
     onDismiss: () -> Unit,
     onSave: (List<Long>) -> Unit,
 ) {
-    val selectedIds = remember(profileName) { mutableStateListOf<Long>() }
-    LaunchedEffect(profileName, initiallySelectedAlbumIds) {
+    val selectedIds = remember(profileId) { mutableStateListOf<Long>() }
+    LaunchedEffect(profileId, initiallySelectedAlbumIds) {
         selectedIds.clear()
         selectedIds.addAll(initiallySelectedAlbumIds.distinct())
     }
