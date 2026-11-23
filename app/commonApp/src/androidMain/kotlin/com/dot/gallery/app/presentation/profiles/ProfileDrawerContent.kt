@@ -46,6 +46,7 @@ import com.dot.gallery.generated.resources.profile_create_title
 import com.dot.gallery.generated.resources.profile_name_hint
 import com.dot.gallery.injection.injectViewModel
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,9 +61,15 @@ fun ProfileDrawerContent(onProfileSelected: () -> Unit) {
     var albumTargetProfile by remember { mutableStateOf<Profile?>(null) }
 
     val targetAlbumIdsFlow = remember(albumTargetProfile?.id) {
-        albumTargetProfile?.let { viewModel.albumIdsInProfile(it.id) } ?: flowOf(emptyList())
+        albumTargetProfile?.takeIf { targetAlbumSelectionLoaded }?.let { target ->
+            viewModel.albumIdsInProfile(target.id).map { ids -> ids to true }
+        } ?: flowOf(emptyList<Long>() to false)
     }
-    val selectedAlbumIds by targetAlbumIdsFlow.collectAsStateWithLifecycle(initialValue = emptyList())
+    val targetAlbumSelection by targetAlbumIdsFlow.collectAsStateWithLifecycle(
+        initialValue = emptyList<Long>() to false
+    )
+    val selectedAlbumIds = targetAlbumSelection.first
+    val targetAlbumSelectionLoaded = targetAlbumSelection.second
 
     ModalDrawerSheet {
         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 20.dp)) {
