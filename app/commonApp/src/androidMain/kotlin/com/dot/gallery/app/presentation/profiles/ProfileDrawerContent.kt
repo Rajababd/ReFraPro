@@ -116,6 +116,7 @@ fun ProfileDrawerContent(onProfileSelected: () -> Unit) {
 
     albumTargetProfile?.let { target ->
         ProfileAlbumSelectorSheet(
+            profileId = target.id,
             profileName = target.name,
             albums = albumsState.albums.filter { isSelectableCollectionAlbumId(it.id) },
             initiallySelectedAlbumIds = selectedAlbumIds,
