@@ -42,17 +42,20 @@ jobs:
         run: chmod +x ./gradlew
       - name: Build optimized ARM64 NoML APK
         run: ./gradlew --no-daemon :app:androidApp:assembleArm64-v8aNoMLOptimized
-      - name: Build unminified ARM64 NoML diagnostic APK
-        run: ./gradlew --no-daemon :app:androidApp:assembleArm64-v8aNoMLStaging
-      - name: Verify APK output
+      - name: Verify optimized APK output
         run: |
           set -euo pipefail
-          find app/androidApp/build/outputs -type f -name '*.apk' -print
-          test "$(find app/androidApp/build/outputs -type f -name '*.apk' | wc -l)" -ge 1
-      - name: Upload installable APK
+          APK_DIR="app/androidApp/build/outputs"
+          find "$APK_DIR" -type f -name '*.apk' -print
+          APK_COUNT="$(find "$APK_DIR" -type f -name '*.apk' | wc -l)"
+          test "$APK_COUNT" -eq 1
+          APK_PATH="$(find "$APK_DIR" -type f -name '*.apk' -print -quit)"
+          echo "Optimized APK: $APK_PATH"
+          ls -lh "$APK_PATH"
+      - name: Upload optimized APK only
         uses: actions/upload-artifact@v4
         with:
-          name: ReFraPro-arm64-NoML-optimized-and-staging
+          name: ReFraPro-ARM64-NoML-Optimized
           path: app/androidApp/build/outputs/**/*.apk
           if-no-files-found: error
           retention-days: 14
