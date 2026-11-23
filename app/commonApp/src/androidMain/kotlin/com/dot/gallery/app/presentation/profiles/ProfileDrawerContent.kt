@@ -25,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -61,15 +62,16 @@ fun ProfileDrawerContent(onProfileSelected: () -> Unit) {
     var albumTargetProfile by remember { mutableStateOf<Profile?>(null) }
 
     val targetAlbumIdsFlow = remember(albumTargetProfile?.id) {
-        albumTargetProfile?.takeIf { targetAlbumSelectionLoaded }?.let { target ->
+        albumTargetProfile?.let { target ->
             viewModel.albumIdsInProfile(target.id).map { ids -> ids to true }
         } ?: flowOf(emptyList<Long>() to false)
     }
-    val targetAlbumSelection by targetAlbumIdsFlow.collectAsStateWithLifecycle(
-        initialValue = emptyList<Long>() to false
-    )
+    val targetAlbumSelection by key(albumTargetProfile?.id) {
+        targetAlbumIdsFlow.collectAsStateWithLifecycle(
+            initialValue = emptyList<Long>() to false
+        )
+    }
     val selectedAlbumIds = targetAlbumSelection.first
-    val targetAlbumSelectionLoaded = targetAlbumSelection.second
 
     ModalDrawerSheet {
         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 20.dp)) {
