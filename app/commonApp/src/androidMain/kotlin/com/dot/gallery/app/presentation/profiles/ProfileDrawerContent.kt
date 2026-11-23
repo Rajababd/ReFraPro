@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.weight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Photo
@@ -27,6 +26,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -57,9 +57,9 @@ fun ProfileDrawerContent(onProfileSelected: () -> Unit) {
     val albumsState by LocalMediaDistributor.current.albumsFlow.collectAsStateWithLifecycle()
     var showCreateDialog by rememberSaveable { mutableStateOf(false) }
     var newProfileName by rememberSaveable { mutableStateOf("") }
-    var albumTargetProfile by mutableStateOf<Profile?>(null)
+    var albumTargetProfile by remember { mutableStateOf<Profile?>(null) }
 
-    val targetAlbumIdsFlow = androidx.compose.runtime.remember(albumTargetProfile?.id) {
+    val targetAlbumIdsFlow = remember(albumTargetProfile?.id) {
         albumTargetProfile?.let { viewModel.albumIdsInProfile(it.id) } ?: flowOf(emptyList())
     }
     val selectedAlbumIds by targetAlbumIdsFlow.collectAsStateWithLifecycle(initialValue = emptyList())
