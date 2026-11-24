@@ -5,6 +5,7 @@ import android.net.Uri
 import android.media.MediaScannerConnection
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.dot.gallery.core.work.isFinished
 import dev.brewkits.kmpworkmanager.background.domain.TaskEventBus
 import com.dot.gallery.core.presentation.components.FilterKind
@@ -91,6 +92,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -222,6 +224,13 @@ class MediaDistributorImpl @Inject constructor(
 
     /** Null means the virtual All Photos profile; otherwise this is the selected profile's membership. */
     private val activeProfileIdFlow = context.activeDataStore.data
+        .onStart {
+            // Apply the configured default once when the app-scoped distributor starts.
+            val defaultId = context.activeDataStore.data.first()[longPreferencesKey("default_profile_id")]
+            if (defaultId != null) {
+                context.activeDataStore.edit { it[longPreferencesKey("active_profile_id")] = defaultId }
+            }
+        }
         .map { it[longPreferencesKey("active_profile_id")] ?: Profile.ALL_PHOTOS_ID }
         .distinctUntilChanged()
         .stateIn(appScope, SharingStarted.Eagerly, Profile.ALL_PHOTOS_ID)
@@ -234,6 +243,23 @@ class MediaDistributorImpl @Inject constructor(
     private val profileAlbumIdsFlow: Flow<Set<Long>?> = activeProfileIdFlow.flatMapLatest { profileId ->
         if (profileId == Profile.ALL_PHOTOS_ID) flowOf(null)
         else repository.getAlbumIdsInProfile(profileId).map { it.toSet() }
+    }
+
+    /** Exclusions for the virtual All Photos profile; custom profiles use Room exclusions. */
+    private val allPhotosExcludedMediaIdsFlow: Flow<Set<Long>> = activeProfileIdFlow.flatMapLatest { profileId ->
+        if (profileId != Profile.ALL_PHOTOS_ID) flowOf(emptySet())
+        else context.activeDataStore.data.map { prefs ->
+            prefs[stringSetPreferencesKey("all_photos_excluded_media_ids")]
+                .orEmpty().mapNotNull(String::toLongOrNull).toSet()
+        }
+    }
+
+    private val allPhotosExcludedAlbumIdsFlow: Flow<Set<Long>> = activeProfileIdFlow.flatMapLatest { profileId ->
+        if (profileId != Profile.ALL_PHOTOS_ID) flowOf(emptySet())
+        else context.activeDataStore.data.map { prefs ->
+            prefs[stringSetPreferencesKey("all_photos_excluded_album_ids")]
+                .orEmpty().mapNotNull(String::toLongOrNull).toSet()
+        }
     }
 
     /**
@@ -953,6 +979,7 @@ class MediaDistributorImpl @Inject constructor(
             sectionsEnabled
                 .onEach { StartupTracer.begin("albums.dep.sectionsEnabled=$it").also { s -> StartupTracer.end(s) } },
             profileAlbumIdsFlow,
+            allPhotosExcludedAlbumIdsFlow,
         ) { values ->
             @Suppress("UNCHECKED_CAST")
             val result = values[0] as Resource<List<Album>>?
@@ -992,6 +1019,8 @@ class MediaDistributorImpl @Inject constructor(
             val areSectionsEnabled = values[16] as Boolean
             @Suppress("UNCHECKED_CAST")
             val profileAlbumIds = values[17] as Set<Long>?
+            @Suppress("UNCHECKED_CAST")
+            val allPhotosExcludedAlbumIds = values[18] as Set<Long>
             val newOrder = settings.albumMediaOrder
             val thumbnailMap = thumbnails.associateBy { it.albumId }
             val localAlbums = newOrder.sortAlbums(result.data ?: emptyList()).map { album ->
@@ -1015,12 +1044,15 @@ class MediaDistributorImpl @Inject constructor(
             val mergedData = (mergedLocalAlbums + remoteAlbums).let { albums ->
                 profileAlbumIds?.let { ids ->
                     albums.filter { album -> album.id in ids || album.sourceAlbumIds.any(ids::contains) }
-                } ?: albums
+                } ?: albums.filter { album ->
+                    album.id !in allPhotosExcludedAlbumIds &&
+                        album.sourceAlbumIds.none(allPhotosExcludedAlbumIds::contains)
+                }
             }
             val data = (localAlbums + allRemoteAlbums).let { albums ->
                 profileAlbumIds?.let { ids ->
                     albums.filter { album -> album.id in ids || album.sourceAlbumIds.any(ids::contains) }
-                } ?: albums
+                } ?: albums.filter { album -> album.id !in allPhotosExcludedAlbumIds }
             }
 
             val groupMemberAlbumIds = groupMembers.mapTo(HashSet(groupMembers.size)) { it.albumId }
@@ -1380,6 +1412,7 @@ class MediaDistributorImpl @Inject constructor(
             _cloudAlbumMembers,
             timelineDateHeaders,
             profileMediaIdsFlow,
+            allPhotosExcludedMediaIdsFlow,
         ) { values ->
             combineEmissionCount++
             val combineSpan = StartupTracer.begin("$tag.combine_body(#$combineEmissionCount)")
@@ -1409,6 +1442,8 @@ class MediaDistributorImpl @Inject constructor(
             val cloudAlbumMembers = values[11] as Map<CloudAlbumMemberId, Set<CloudAlbumMemberId>>
             @Suppress("UNCHECKED_CAST")
             val profileMediaIds = values[13] as Set<Long>?
+            @Suppress("UNCHECKED_CAST")
+            val allPhotosExcludedMediaIds = values[14] as Set<Long>
             
             val (defaultDateFormat, extendedDateFormat, weeklyDateFormat) = dateFormats
             
@@ -1435,6 +1470,8 @@ class MediaDistributorImpl @Inject constructor(
                 }
                 if (profileMediaIds != null && !isTrash) {
                     removeAll { media -> media.id !in profileMediaIds }
+                } else if (profileMediaIds == null && !isTrash && allPhotosExcludedMediaIds.isNotEmpty()) {
+                    removeAll { media -> media.id in allPhotosExcludedMediaIds || media.albumID in allPhotosExcludedAlbumIdsFlow.first() }
                 }
             }
             // Merge cloud media into the unified timeline. When CLOUD_LOCAL is enabled a cloud
@@ -1454,8 +1491,9 @@ class MediaDistributorImpl @Inject constructor(
                 val visibleCloudMedia = (hidePredicate?.let { hidden ->
                     cloudMedia.filterNot { m -> cloudMemberKey(m.uri.toString())?.let(hidden) == true }
                 } ?: cloudMedia).let { items ->
-                    if (profileMediaIds == null || isTrash) items
-                    else items.filter { it.id in profileMediaIds }
+                    if (isTrash) items
+                    else if (profileMediaIds != null) items.filter { it.id in profileMediaIds }
+                    else items.filter { it.id !in allPhotosExcludedMediaIds }
                 }
                 if (MediaGroupType.CLOUD_LOCAL in groupTypes) {
                     val localByBasename = HashMap<String, Long>(data.size)
