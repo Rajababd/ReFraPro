@@ -19,7 +19,13 @@ import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,6 +48,13 @@ import com.dot.gallery.domain.model.CollectionWithCount
 import com.dot.gallery.feature.albums.ui.AlbumThumbnailActions
 import com.dot.gallery.feature.albums.ui.AlbumsContent
 import com.dot.gallery.feature.albums.ui.collections.CollectionThumbnailModel
+import com.dot.gallery.feature.albums.ui.collections.AddToCollectionSheet
+import com.dot.gallery.feature.albums.ui.collections.CollectionViewModel
+import com.dot.gallery.app.presentation.profiles.ProfileViewModel
+import com.dot.gallery.app.presentation.profiles.ProfileTargetSheet
+import com.dot.gallery.app.presentation.profiles.ProfileTargetAction
+import com.dot.gallery.injection.injectViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dot.gallery.app.presentation.picker.PickerActivityContract
 import com.dot.gallery.app.presentation.main.MainScreenTopBar
 import com.dot.gallery.core.presentation.util.Screen
@@ -93,6 +106,16 @@ fun AlbumsScreen(
 ) {
     val trashResult = rememberActivityResult()
     val startupGate = LocalStartupWorkGate.current
+    val profileViewModel = injectViewModel<ProfileViewModel> { profileViewModel }
+    val profiles by profileViewModel.profiles.collectAsStateWithLifecycle()
+    val collectionViewModel = injectViewModel<CollectionViewModel> { collectionViewModel }
+    val collections by collectionViewModel.collectionsWithCount.collectAsStateWithLifecycle()
+    var showProfileTargetSheet by rememberSaveable { mutableStateOf(false) }
+    var profileTargetAction by rememberSaveable { mutableStateOf(ProfileTargetAction.ADD) }
+    var showAddToCollectionSheet by rememberSaveable { mutableStateOf(false) }
+    var pendingAlbumIds by rememberSaveable { mutableStateOf(emptyList<Long>()) }
+
+    Box(Modifier.fillMaxSize()) {
     AlbumsContent(
         paddingValues = paddingValues,
         filterOptions = filterOptions,
@@ -158,7 +181,50 @@ fun AlbumsScreen(
         collectionThumbnailModel = collectionThumbnailModel,
         sharedTransitionScope = sharedTransitionScope,
         animatedContentScope = animatedContentScope,
+        onAddAlbumsToProfiles = { ids ->
+            pendingAlbumIds = ids
+            profileTargetAction = ProfileTargetAction.ADD
+            showProfileTargetSheet = true
+        },
+        onRemoveAlbumsFromProfiles = { ids ->
+            pendingAlbumIds = ids
+            profileTargetAction = ProfileTargetAction.REMOVE
+            showProfileTargetSheet = true
+        },
+        onAddAlbumsToCollection = { ids ->
+            pendingAlbumIds = ids
+            showAddToCollectionSheet = true
+        },
     )
+    ProfileTargetSheet(
+        visible = showProfileTargetSheet,
+        profiles = profiles,
+        action = profileTargetAction,
+        onDismiss = { showProfileTargetSheet = false },
+        onConfirm = { profileIds ->
+            if (profileTargetAction == ProfileTargetAction.ADD) {
+                profileViewModel.addAlbumsToProfiles(profileIds, pendingAlbumIds)
+            } else {
+                profileViewModel.removeAlbumsFromProfiles(profileIds, pendingAlbumIds)
+            }
+            showProfileTargetSheet = false
+        }
+    )
+    AddToCollectionSheet(
+        visible = showAddToCollectionSheet,
+        collections = collections,
+        onDismiss = { showAddToCollectionSheet = false },
+        onCollectionSelected = { collectionId ->
+            collectionViewModel.addAlbumsToCollection(collectionId, pendingAlbumIds)
+            showAddToCollectionSheet = false
+        },
+        onCreateAndAdd = { name ->
+            collectionViewModel.createCollectionAndAddAlbums(name, pendingAlbumIds)
+            showAddToCollectionSheet = false
+        },
+        collectionThumbnailModel = collectionThumbnailModel,
+    )
+    }
 }
 
 /** MediaStore files URI model for collection cover thumbnails. */
