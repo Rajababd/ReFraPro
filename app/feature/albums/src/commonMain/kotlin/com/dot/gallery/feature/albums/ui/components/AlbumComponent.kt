@@ -41,6 +41,8 @@ import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.RemoveCircleOutline
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.SdCard
+import androidx.compose.material.icons.outlined.SelectAll
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.outlined.Wallpaper
 import androidx.compose.material3.Icon
@@ -118,6 +120,7 @@ import com.dot.gallery.feature.albums.generated.resources.move_to_section
 import com.dot.gallery.feature.albums.generated.resources.pin
 import com.dot.gallery.feature.albums.generated.resources.remove_album_from_group
 import com.dot.gallery.feature.albums.generated.resources.s_items
+import com.dot.gallery.feature.albums.generated.resources.select_multiple_albums
 import com.dot.gallery.feature.albums.generated.resources.select_new_thumbnail
 import com.dot.gallery.feature.albums.generated.resources.show_combined_timeline
 import com.dot.gallery.feature.albums.generated.resources.unlock_album
@@ -138,8 +141,11 @@ fun AlbumComponent(
     album: Album,
     isEnabled: Boolean = true,
     onItemClick: (Album) -> Unit,
+    onSelectMultiple: ((Album) -> Unit)? = null,
+    isSelected: Boolean = false,
     onMoveAlbumToTrash: ((Album) -> Unit)? = null,
     onTogglePinClick: ((Album) -> Unit)? = null,
+    onSelectMultiple: ((Album) -> Unit)? = null,
     onToggleIgnoreClick: ((Album) -> Unit)? = null,
     onToggleLockClick: ((Album) -> Unit)? = null,
     onDeleteAlbumThumbnailClick: ((Album) -> Unit)? = null,
@@ -167,6 +173,7 @@ fun AlbumComponent(
             appBottomSheetState = appBottomSheetState,
             onMoveAlbumToTrash = onMoveAlbumToTrash,
             onTogglePinClick = onTogglePinClick,
+            onSelectMultiple = onSelectMultiple,
             onToggleIgnoreClick = onToggleIgnoreClick,
             onToggleLockClick = onToggleLockClick,
             onDeleteAlbumThumbnailClick = onDeleteAlbumThumbnailClick,
@@ -198,6 +205,42 @@ fun AlbumComponent(
                     }
                 } else null
             )
+            if (isSelected) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+            if (isSelected) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
             if (album.isOnSdcard) {
                 Icon(
                     modifier = Modifier
@@ -312,6 +355,8 @@ fun AlbumRowComponent(
     album: Album,
     isEnabled: Boolean = true,
     onItemClick: (Album) -> Unit,
+    onSelectMultiple: ((Album) -> Unit)? = null,
+    isSelected: Boolean = false,
     onMoveAlbumToTrash: ((Album) -> Unit)? = null,
     onTogglePinClick: ((Album) -> Unit)? = null,
     onToggleIgnoreClick: ((Album) -> Unit)? = null,
@@ -353,6 +398,7 @@ fun AlbumRowComponent(
             appBottomSheetState = appBottomSheetState,
             onMoveAlbumToTrash = onMoveAlbumToTrash,
             onTogglePinClick = onTogglePinClick,
+            onSelectMultiple = onSelectMultiple,
             onToggleIgnoreClick = onToggleIgnoreClick,
             onToggleLockClick = onToggleLockClick,
             onAddToGroup = onAddToGroup,
@@ -523,6 +569,7 @@ fun AlbumOptionSheet(
         onErrorContainer,
         onMoveAlbumToTrash,
         onTogglePinClick,
+        onSelectMultiple,
         onToggleIgnoreClick,
         onToggleLockClick,
         onAddToGroup,
@@ -558,6 +605,20 @@ fun AlbumOptionSheet(
                     }
                 )
             )
+            if (onSelectMultiple != null && !isCloudAlbum) {
+                add(
+                    OptionItem(
+                        icon = Icons.Outlined.SelectAll,
+                        text = stringResource(Res.string.select_multiple_albums),
+                        onClick = {
+                            scope.launch {
+                                appBottomSheetState.hide()
+                                onSelectMultiple(album)
+                            }
+                        }
+                    )
+                )
+            }
             if (!isCloudAlbum) {
                 add(
                     OptionItem(
