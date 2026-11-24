@@ -1474,7 +1474,7 @@ class MediaDistributorImpl @Inject constructor(
                 }
                 if (profileMediaIds != null && !isTrash) {
                     removeAll { media -> media.id !in profileMediaIds }
-                } else if (profileMediaIds == null && !isTrash && allPhotosExcludedMediaIds.isNotEmpty()) {
+                } else if (profileMediaIds == null && !isTrash && (allPhotosExcludedMediaIds.isNotEmpty() || allPhotosExcludedAlbumIds.isNotEmpty())) {
                     removeAll { media -> media.id in allPhotosExcludedMediaIds || media.albumID in allPhotosExcludedAlbumIds }
                 }
             }
