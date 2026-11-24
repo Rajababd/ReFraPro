@@ -180,6 +180,16 @@ fun AlbumsScreen(
         collectionThumbnailModel = collectionThumbnailModel,
         sharedTransitionScope = sharedTransitionScope,
         animatedContentScope = animatedContentScope,
+        onAddAlbumToProfile = { album ->
+            pendingAlbumIds = album.sourceAlbumIds.takeIf { it.isNotEmpty() } ?: listOf(album.id)
+            profileTargetAction = ProfileTargetAction.ADD
+            showProfileTargetSheet = true
+        },
+        onRemoveAlbumFromProfile = { album ->
+            pendingAlbumIds = album.sourceAlbumIds.takeIf { it.isNotEmpty() } ?: listOf(album.id)
+            profileTargetAction = ProfileTargetAction.REMOVE
+            showProfileTargetSheet = true
+        },
         onAddAlbumsToProfiles = { ids ->
             pendingAlbumIds = ids
             profileTargetAction = ProfileTargetAction.ADD
