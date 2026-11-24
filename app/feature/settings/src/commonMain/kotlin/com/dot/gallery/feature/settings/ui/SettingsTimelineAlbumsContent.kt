@@ -137,6 +137,7 @@ import com.dot.gallery.core.ui.util.AppBottomSheetState
 import com.dot.gallery.core.ui.util.rememberAppBottomSheetState
 import com.dot.gallery.core.ui.util.rememberedDerivedState
 import com.dot.gallery.domain.model.AlbumSection
+import com.dot.gallery.domain.model.Profile
 import com.dot.gallery.domain.model.AlbumSectionType
 import com.dot.gallery.domain.model.LastSort
 import com.dot.gallery.domain.model.sectionType
@@ -276,6 +277,7 @@ private const val DETAIL_GIF_ANIMATION = "gif_animation"
 private const val DETAIL_FILTER_BUTTON = "filter_button"
 private const val DETAIL_MERGE_ALBUMS = "merge_albums"
 private const val DETAIL_ALBUM_SECTIONS = "album_sections"
+private const val DETAIL_DEFAULT_PROFILE = "default_profile"
 private const val DETAIL_FAV_ICON = "fav_icon"
 private const val DETAIL_DATE_HEADERS = "date_headers"
 private const val DETAIL_GROUP_METHOD = "group_method"
@@ -457,6 +459,32 @@ fun SettingsTimelineAlbumsContent(
                 sections = state.albumSections,
                 albumCountBySection = state.albumCountBySection,
                 actions = actions,
+            )
+        }
+        DETAIL_DEFAULT_PROFILE -> {
+            BackHandler { detailKey = null }
+            ChooserPreferenceDetailScreen(
+                title = stringResource(Res.string.default_profile_title),
+                description = stringResource(Res.string.default_profile_description),
+                options = buildList {
+                    add(
+                        PreferenceOption(
+                            Profile.ALL_PHOTOS_ID,
+                            stringResource(Res.string.default_profile_all_photos),
+                            state.defaultProfileId == Profile.ALL_PHOTOS_ID,
+                        )
+                    )
+                    state.profiles.forEach { profile ->
+                        add(
+                            PreferenceOption(
+                                profile.id,
+                                profile.name,
+                                state.defaultProfileId == profile.id,
+                            )
+                        )
+                    }
+                },
+                onOptionSelected = actions.onDefaultProfileSelected,
             )
         }
         DETAIL_FAV_ICON -> {
@@ -831,6 +859,16 @@ private fun TimelineAlbumsListContent(
             SettingsEntity.Header(title = albumsHeaderTitle)
         }
 
+        val defaultProfileLabel = state.profiles.firstOrNull { it.id == state.defaultProfileId }?.name
+            ?: stringResource(Res.string.default_profile_all_photos)
+        val defaultProfilePref = rememberPreference(
+            title = stringResource(Res.string.default_profile_title),
+            icon = Icons.Outlined.Workspaces,
+            summary = defaultProfileLabel,
+            onClick = { onDetailClick(DETAIL_DEFAULT_PROFILE) },
+            screenPosition = Position.Top
+        )
+
         val mergeAlbumsByNamePref = rememberSwitchPreference(
             mergeAlbumsByName,
             title = stringResource(Res.string.merge_albums_by_name),
@@ -975,7 +1013,7 @@ private fun TimelineAlbumsListContent(
             allowGifAnimationPref, monthHighlightsPref, headerPlacesPref, floatingDateLabelPref,
             dateHeaderPref, recheckCaptureDatesPref, showFilterButtonPref,
             storyCardsPref,
-            albumsHeader, mergeAlbumsByNamePref, updateModifiedDatePref, albumSectionsPref,
+            albumsHeader, defaultProfilePref, mergeAlbumsByNamePref, updateModifiedDatePref, albumSectionsPref,
             showMediaTypeAlbumsPref, displayHeader, favIconPositionPref,
             dateHeadersPref, groupMethodPref, libraryHeader, locationCategoriesPref,
             peopleSectionPref, categoriesSectionPref
@@ -995,6 +1033,7 @@ private fun TimelineAlbumsListContent(
                 add(storyCardsPref)
 
                 add(albumsHeader)
+                add(defaultProfilePref)
                 add(mergeAlbumsByNamePref)
                 add(updateModifiedDatePref)
                 add(albumSectionsPref)
