@@ -133,6 +133,7 @@ import com.dot.gallery.cloud.ui.CloudSelectionViewModel
 import com.dot.gallery.feature.albums.ui.collections.CollectionViewModel
 import com.dot.gallery.app.presentation.profiles.ProfileViewModel
 import com.dot.gallery.app.presentation.profiles.ProfileTargetSheet
+import com.dot.gallery.app.presentation.profiles.ProfileTargetAction
 import com.dot.gallery.feature.vault.privatefolder.PrivateFolderMoveViewModel
 import com.dot.gallery.feature.vault.VaultViewModel
 import com.dot.gallery.core.Settings.Misc.rememberAllowBlur
@@ -249,6 +250,7 @@ fun <T : Media> BoxScope.SelectionSheet(
     val copySheetState = rememberAppBottomSheetState()
     var showCollectionSheet by rememberSaveable { mutableStateOf(false) }
     var showProfileTargetSheet by rememberSaveable { mutableStateOf(false) }
+    var profileTargetAction by rememberSaveable { mutableStateOf(ProfileTargetAction.ADD) }
     val collectionViewModel = injectViewModel<CollectionViewModel> {collectionViewModel}
     val profileViewModel = injectViewModel<ProfileViewModel> { profileViewModel }
     val profileItems by profileViewModel.profiles.collectAsStateWithLifecycle()
@@ -978,26 +980,31 @@ fun <T : Media> BoxScope.SelectionSheet(
                 }
             }
             if (!isInVault && !isInPrivateFolder && !isCloudSelection && !isMixedCloudSelection && selectedMedia.isNotEmpty()) {
-                val isAllPhotos = activeProfileId == 0L
-                MiddleActionButton(
-                    icon = Icons.Outlined.PhotoLibrary,
-                    text = stringResource(
-                        if (isAllPhotos) Res.string.profile_add_media
-                        else Res.string.profile_remove_media
-                    ),
-                    surfaceColor = surfaceColor,
-                    onClick = {
-                        if (isAllPhotos) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    MiddleActionButton(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Outlined.PhotoLibrary,
+                        text = stringResource(Res.string.profile_add_media),
+                        surfaceColor = surfaceColor,
+                        onClick = {
+                            profileTargetAction = ProfileTargetAction.ADD
                             showProfileTargetSheet = true
-                        } else {
-                            profileViewModel.removeMediaListFromProfile(
-                                activeProfileId,
-                                selectedMedia.map { it.id }
-                            )
-                            selector.clearSelection()
                         }
-                    }
-                )
+                    )
+                    MiddleActionButton(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Outlined.PhotoLibrary,
+                        text = stringResource(Res.string.profile_remove_media),
+                        surfaceColor = surfaceColor,
+                        onClick = {
+                            profileTargetAction = ProfileTargetAction.REMOVE
+                            showProfileTargetSheet = true
+                        }
+                    )
+                }
             }
             Row(
                 modifier = Modifier
@@ -1395,12 +1402,15 @@ fun <T : Media> BoxScope.SelectionSheet(
     ProfileTargetSheet(
         visible = showProfileTargetSheet,
         profiles = profileItems,
+        action = profileTargetAction,
         onDismiss = { showProfileTargetSheet = false },
-        onProfileSelected = { profileId ->
-            profileViewModel.addMediaListToProfile(
-                profileId,
-                selectedMedia.map { it.id }
-            )
+        onConfirm = { profileIds ->
+            val mediaIds = selectedMedia.map { it.id }
+            if (profileTargetAction == ProfileTargetAction.ADD) {
+                profileViewModel.addMediaListToProfiles(profileIds, mediaIds)
+            } else {
+                profileViewModel.removeMediaListFromProfiles(profileIds, mediaIds)
+            }
             showProfileTargetSheet = false
             selector.clearSelection()
         }
@@ -1607,6 +1617,7 @@ fun SelectionAddon(
 
 @Composable
 private fun MiddleActionButton(
+    modifier: Modifier = Modifier,
     icon: ImageVector,
     text: String,
     surfaceColor: Color,
@@ -1625,7 +1636,7 @@ private fun MiddleActionButton(
         }
     }
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .then(backgroundModifier)
             .clip(shape)
