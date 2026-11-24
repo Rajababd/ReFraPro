@@ -94,4 +94,12 @@
     <string name="group_add_albums">Add albums</string>
     <string name="detail_rename">Rename</string>
     <string name="detail_slideshow">Slideshow</string>
+    <string name="select_multiple_albums">Select multiple albums</string>
+    <string name="album_selection_count">%1$d albums selected</string>
+    <string name="album_selection_delete">Delete</string>
+    <string name="album_selection_ignore">Ignore</string>
+    <string name="album_selection_add_collection">Add to collection</string>
+    <string name="album_selection_add_profile">Add to profile</string>
+    <string name="album_selection_remove_profile">Remove from profile</string>
+    <string name="album_selection_cancel">Cancel selection</string>
 </resources>
