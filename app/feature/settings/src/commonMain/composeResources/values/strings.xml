@@ -825,4 +825,7 @@
     <string name="floating_date_label_title">Floating date label</string>
     <string name="floating_date_label_summary">Keep the date at the top while you scroll</string>
     <string name="floating_date_label_description">While you scroll, the date you are in floats at the top of the timeline. Tap it to see every month and jump to one; pinching out past the smallest grid opens the same view. Turned off, the date shows as a plain sticky header.</string>
+    <string name="default_profile_title">Default profile</string>
+    <string name="default_profile_description">Choose which profile opens automatically whenever ReFraPro starts.</string>
+    <string name="default_profile_all_photos">All Photos</string>
 </resources>
