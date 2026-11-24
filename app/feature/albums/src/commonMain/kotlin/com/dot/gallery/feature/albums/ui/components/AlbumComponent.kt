@@ -145,7 +145,6 @@ fun AlbumComponent(
     isSelected: Boolean = false,
     onMoveAlbumToTrash: ((Album) -> Unit)? = null,
     onTogglePinClick: ((Album) -> Unit)? = null,
-    onSelectMultiple: ((Album) -> Unit)? = null,
     onToggleIgnoreClick: ((Album) -> Unit)? = null,
     onToggleLockClick: ((Album) -> Unit)? = null,
     onDeleteAlbumThumbnailClick: ((Album) -> Unit)? = null,
@@ -205,24 +204,6 @@ fun AlbumComponent(
                     }
                 } else null
             )
-            if (isSelected) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.CheckCircle,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            }
             if (isSelected) {
                 Box(
                     modifier = Modifier
@@ -428,6 +409,24 @@ fun AlbumRowComponent(
                     }
                 } else null
             )
+            if (isSelected) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
             if (album.isOnSdcard) {
                 Icon(
                     modifier = Modifier
