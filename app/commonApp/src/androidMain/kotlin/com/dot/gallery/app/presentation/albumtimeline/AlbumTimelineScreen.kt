@@ -144,6 +144,7 @@ import com.dot.gallery.core.presentation.components.rememberMosaicPinchZoomState
 import com.dot.gallery.feature.albums.CloudAlbumManageViewModel
 import com.dot.gallery.app.presentation.profiles.ProfileViewModel
 import com.dot.gallery.app.presentation.profiles.ProfileTargetSheet
+import com.dot.gallery.app.presentation.profiles.ProfileTargetAction
 import com.dot.gallery.generated.resources.Res
 import com.dot.gallery.generated.resources.album_name
 import com.dot.gallery.generated.resources.profile_add_album
@@ -517,9 +518,10 @@ fun AlbumTimelineScreen(
         ProfileTargetSheet(
             visible = showProfileTargetSheet,
             profiles = profileItems,
+            action = ProfileTargetAction.ADD,
             onDismiss = { showProfileTargetSheet = false },
-            onProfileSelected = { profileId ->
-                profileViewModel.addAlbumsToProfile(profileId, profileAlbumIds)
+            onConfirm = { profileIds ->
+                profileViewModel.addAlbumsToProfiles(profileIds, profileAlbumIds)
                 showProfileTargetSheet = false
             }
         )
