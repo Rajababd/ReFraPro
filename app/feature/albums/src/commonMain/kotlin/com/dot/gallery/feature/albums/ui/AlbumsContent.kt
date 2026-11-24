@@ -245,6 +245,11 @@ fun AlbumsContent(
     val selectedAlbums = remember(selectedAlbumIds, albumsState.value.albums) {
         albumsState.value.albums.filter { it.id in selectedAlbumIds }
     }
+    val selectedAlbumIdsForAction = remember(selectedAlbums) {
+        selectedAlbums.flatMap { album ->
+            album.sourceAlbumIds.takeIf { it.isNotEmpty() } ?: listOf(album.id)
+        }.distinct()
+    }
     val toggleAlbumSelection: (Album) -> Unit = { album ->
         selectedAlbumIds = if (album.id in selectedAlbumIds) {
             selectedAlbumIds - album.id
@@ -1200,20 +1205,20 @@ fun AlbumsContent(
                 if (onAddAlbumsToCollection != null) {
                     TextButton(
                         onClick = {
-                            onAddAlbumsToCollection(selectedAlbumIds.toList())
+                            onAddAlbumsToCollection(selectedAlbumIdsForAction)
                             clearAlbumSelection()
                         }
                     ) { Text(stringResource(Res.string.album_selection_add_collection)) }
                 }
                 TextButton(
                     onClick = {
-                        onAddAlbumsToProfiles(selectedAlbumIds.toList())
+                        onAddAlbumsToProfiles(selectedAlbumIdsForAction)
                         clearAlbumSelection()
                     }
                 ) { Text(stringResource(Res.string.album_selection_add_profile)) }
                 TextButton(
                     onClick = {
-                        onRemoveAlbumsFromProfiles(selectedAlbumIds.toList())
+                        onRemoveAlbumsFromProfiles(selectedAlbumIdsForAction)
                         clearAlbumSelection()
                     }
                 ) { Text(stringResource(Res.string.album_selection_remove_profile)) }
