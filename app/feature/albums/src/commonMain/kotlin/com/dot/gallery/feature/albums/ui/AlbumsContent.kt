@@ -48,6 +48,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -188,6 +189,9 @@ fun AlbumsContent(
     onAlbumLongClick: (Album) -> Unit,
     onMoveAlbumToTrash: (Album) -> Unit,
     onIgnoreAlbum: (Album) -> Unit,
+    onAddAlbumsToProfiles: (List<Long>) -> Unit = {},
+    onRemoveAlbumsFromProfiles: (List<Long>) -> Unit = {},
+    onAddAlbumsToCollection: ((List<Long>) -> Unit)? = null,
     onLockAlbum: (Album) -> Unit,
     onGroupClick: (AlbumGroupWithAlbums) -> Unit = {},
     onRenameGroup: (AlbumGroupWithAlbums) -> Unit = {},
@@ -236,6 +240,30 @@ fun AlbumsContent(
         initial = MediaState<UriMedia>()
     )
     val albumsState = distributor.albumsFlow.collectAsState()
+    var multiSelectAlbums by rememberSaveable { mutableStateOf(false) }
+    var selectedAlbumIds by remember { mutableStateOf(emptySet<Long>()) }
+    val selectedAlbums = remember(selectedAlbumIds, albumsState.value.albums) {
+        albumsState.value.albums.filter { it.id in selectedAlbumIds }
+    }
+    val toggleAlbumSelection: (Album) -> Unit = { album ->
+        selectedAlbumIds = if (album.id in selectedAlbumIds) {
+            selectedAlbumIds - album.id
+        } else {
+            selectedAlbumIds + album.id
+        }
+        if (selectedAlbumIds.isEmpty()) multiSelectAlbums = false
+    }
+    val startAlbumSelection: (Album) -> Unit = { album ->
+        selectedAlbumIds = setOf(album.id)
+        multiSelectAlbums = true
+    }
+    val handleAlbumClick: (Album) -> Unit = { album ->
+        if (multiSelectAlbums) toggleAlbumSelection(album) else onAlbumClick(album)
+    }
+    val clearAlbumSelection: () -> Unit = {
+        selectedAlbumIds = emptySet()
+        multiSelectAlbums = false
+    }
     startupReadyEffect(!albumsState.value.isLoading)
 
     // Cloud albums grouped by provider (e.g. SMB, IMMICH) for their dedicated section.
@@ -558,8 +586,10 @@ fun AlbumsContent(
                                                     animatedVisibilityScope = animatedContentScope
                                                 ),
                                             album = item,
-                                            onItemClick = onAlbumClick,
-                                            onTogglePinClick = onAlbumLongClick,
+                                            onItemClick = handleAlbumClick,
+                                            onSelectMultiple = if (item.relativePath.startsWith("cloud/")) null else startAlbumSelection,
+                                            isSelected = item.id in selectedAlbumIds,
+                                            onTogglePinClick = if (multiSelectAlbums) null else onAlbumLongClick,
                                             onMoveAlbumToTrash = onMoveAlbumToTrash,
                                             onToggleIgnoreClick = onIgnoreAlbum,
                                             onToggleLockClick = onLockAlbum,
@@ -593,8 +623,10 @@ fun AlbumsContent(
                                             animatedVisibilityScope = animatedContentScope
                                         ),
                                     album = item,
-                                    onItemClick = onAlbumClick,
-                                    onTogglePinClick = onAlbumLongClick,
+                                    onItemClick = handleAlbumClick,
+                                    onSelectMultiple = if (item.relativePath.startsWith("cloud/")) null else startAlbumSelection,
+                                    isSelected = item.id in selectedAlbumIds,
+                                    onTogglePinClick = if (multiSelectAlbums) null else onAlbumLongClick,
                                     onMoveAlbumToTrash = onMoveAlbumToTrash,
                                     onToggleIgnoreClick = onIgnoreAlbum,
                                     onToggleLockClick = onLockAlbum,
@@ -641,8 +673,10 @@ fun AlbumsContent(
                                             animatedVisibilityScope = animatedContentScope
                                         ),
                                     album = item,
-                                    onItemClick = onAlbumClick,
-                                    onTogglePinClick = onAlbumLongClick,
+                                    onItemClick = handleAlbumClick,
+                                    onSelectMultiple = if (item.relativePath.startsWith("cloud/")) null else startAlbumSelection,
+                                    isSelected = item.id in selectedAlbumIds,
+                                    onTogglePinClick = if (multiSelectAlbums) null else onAlbumLongClick,
                                     onMoveAlbumToTrash = onMoveAlbumToTrash,
                                     onToggleIgnoreClick = onIgnoreAlbum,
                                     onToggleLockClick = onLockAlbum,
@@ -702,8 +736,10 @@ fun AlbumsContent(
                                                 animatedVisibilityScope = animatedContentScope
                                             ),
                                         album = item,
-                                        onItemClick = onAlbumClick,
-                                        onTogglePinClick = onAlbumLongClick,
+                                        onItemClick = handleAlbumClick,
+                                        onSelectMultiple = if (item.relativePath.startsWith("cloud/")) null else startAlbumSelection,
+                                        isSelected = item.id in selectedAlbumIds,
+                                        onTogglePinClick = if (multiSelectAlbums) null else onAlbumLongClick,
                                         onMoveAlbumToTrash = onMoveAlbumToTrash,
                                         onToggleIgnoreClick = onIgnoreAlbum,
                                         isMergedSubfolder = false,
@@ -899,8 +935,10 @@ fun AlbumsContent(
                                                 animatedVisibilityScope = animatedContentScope
                                             ),
                                         album = item,
-                                        onItemClick = onAlbumClick,
-                                        onTogglePinClick = onAlbumLongClick,
+                                        onItemClick = handleAlbumClick,
+                                        onSelectMultiple = if (item.relativePath.startsWith("cloud/")) null else startAlbumSelection,
+                                        isSelected = item.id in selectedAlbumIds,
+                                        onTogglePinClick = if (multiSelectAlbums) null else onAlbumLongClick,
                                         onMoveAlbumToTrash = onMoveAlbumToTrash,
                                         onToggleIgnoreClick = onIgnoreAlbum,
                                         onToggleLockClick = onLockAlbum,
@@ -934,8 +972,10 @@ fun AlbumsContent(
                                         animatedVisibilityScope = animatedContentScope
                                     ),
                                 album = item,
-                                onItemClick = onAlbumClick,
-                                onTogglePinClick = onAlbumLongClick,
+                                onItemClick = handleAlbumClick,
+                                onSelectMultiple = if (item.relativePath.startsWith("cloud/")) null else startAlbumSelection,
+                                isSelected = item.id in selectedAlbumIds,
+                                onTogglePinClick = if (multiSelectAlbums) null else onAlbumLongClick,
                                 onMoveAlbumToTrash = onMoveAlbumToTrash,
                                 onToggleIgnoreClick = onIgnoreAlbum,
                                 onToggleLockClick = onLockAlbum,
@@ -978,8 +1018,10 @@ fun AlbumsContent(
                                         animatedVisibilityScope = animatedContentScope
                                     ),
                                 album = item,
-                                onItemClick = onAlbumClick,
-                                onTogglePinClick = onAlbumLongClick,
+                                onItemClick = handleAlbumClick,
+                                onSelectMultiple = if (item.relativePath.startsWith("cloud/")) null else startAlbumSelection,
+                                isSelected = item.id in selectedAlbumIds,
+                                onTogglePinClick = if (multiSelectAlbums) null else onAlbumLongClick,
                                 onMoveAlbumToTrash = onMoveAlbumToTrash,
                                 onToggleIgnoreClick = onIgnoreAlbum,
                                 onToggleLockClick = onLockAlbum,
@@ -1033,8 +1075,10 @@ fun AlbumsContent(
                                             animatedVisibilityScope = animatedContentScope
                                         ),
                                     album = item,
-                                    onItemClick = onAlbumClick,
-                                    onTogglePinClick = onAlbumLongClick,
+                                    onItemClick = handleAlbumClick,
+                                    onSelectMultiple = if (item.relativePath.startsWith("cloud/")) null else startAlbumSelection,
+                                    isSelected = item.id in selectedAlbumIds,
+                                    onTogglePinClick = if (multiSelectAlbums) null else onAlbumLongClick,
                                     onMoveAlbumToTrash = onMoveAlbumToTrash,
                                     onToggleIgnoreClick = onIgnoreAlbum,
                                     isMergedSubfolder = false,
@@ -1119,6 +1163,62 @@ fun AlbumsContent(
                             }
                         }
                     }
+                }
+            }
+        }
+        if (multiSelectAlbums) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 12.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(Res.string.album_selection_count, selectedAlbumIds.size),
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                    style = MaterialTheme.typography.labelLarge,
+                    maxLines = 1
+                )
+                TextButton(
+                    onClick = {
+                        selectedAlbums.forEach(onMoveAlbumToTrash)
+                        clearAlbumSelection()
+                    }
+                ) { Text(stringResource(Res.string.album_selection_delete)) }
+                TextButton(
+                    onClick = {
+                        selectedAlbums.forEach(onIgnoreAlbum)
+                        clearAlbumSelection()
+                    }
+                ) { Text(stringResource(Res.string.album_selection_ignore)) }
+                if (onAddAlbumsToCollection != null) {
+                    TextButton(
+                        onClick = {
+                            onAddAlbumsToCollection(selectedAlbumIds.toList())
+                            clearAlbumSelection()
+                        }
+                    ) { Text(stringResource(Res.string.album_selection_add_collection)) }
+                }
+                TextButton(
+                    onClick = {
+                        onAddAlbumsToProfiles(selectedAlbumIds.toList())
+                        clearAlbumSelection()
+                    }
+                ) { Text(stringResource(Res.string.album_selection_add_profile)) }
+                TextButton(
+                    onClick = {
+                        onRemoveAlbumsFromProfiles(selectedAlbumIds.toList())
+                        clearAlbumSelection()
+                    }
+                ) { Text(stringResource(Res.string.album_selection_remove_profile)) }
+                TextButton(onClick = clearAlbumSelection) {
+                    Text(stringResource(Res.string.album_selection_cancel))
                 }
             }
         }
