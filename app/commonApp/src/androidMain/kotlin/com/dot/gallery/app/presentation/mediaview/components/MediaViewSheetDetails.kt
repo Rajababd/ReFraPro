@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudDone
 import androidx.compose.material.icons.outlined.PersonRemove
+import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -79,6 +80,7 @@ import com.dot.gallery.ui.theme.isDarkTheme
 import kotlinx.coroutines.launch
 import com.dot.gallery.domain.util.getCategory
 import com.dot.gallery.domain.util.isVideo
+import com.dot.gallery.domain.util.isCloud
 import com.dot.gallery.app.presentation.exif.MetadataEditSheet
 import com.dot.gallery.app.presentation.exif.MoveMediaSheet
 import com.dot.gallery.app.presentation.util.rememberMediaInfo
@@ -92,6 +94,9 @@ import com.dot.gallery.core.presentation.util.effectiveCartoBasemapKey
 import com.dot.gallery.app.presentation.util.launchMap
 import com.dot.gallery.core.rememberMediaViewerNavigate
 import com.dot.gallery.injection.injectViewModel
+import com.dot.gallery.app.presentation.profiles.ProfileViewModel
+import com.dot.gallery.app.presentation.profiles.ProfileTargetSheet
+import com.dot.gallery.app.presentation.profiles.ProfileTargetAction
 import com.dot.gallery.BuildConfig
 import com.dot.gallery.feature.viewer.components.LocationAccessItem
 import com.dot.gallery.generated.resources.Res
@@ -109,6 +114,8 @@ import com.dot.gallery.generated.resources.remove_metadata_copy_success
 import com.dot.gallery.generated.resources.remove_metadata_failed
 import com.dot.gallery.generated.resources.remove_metadata_rolled_back
 import com.dot.gallery.generated.resources.remove_metadata_success
+import com.dot.gallery.generated.resources.profile_add_media
+import com.dot.gallery.generated.resources.profile_remove_media
 
 /**
  * App-side host for the viewer's info/details sheet: keeps the legacy call signature
@@ -137,6 +144,10 @@ fun <T : Media> MediaViewSheetDetails(
     val metadata by rememberedDerivedState(metadataState.value, currentMedia) {
         currentMedia?.id?.let { metadataState.value.metadataMap[it] }
     }
+    val profileViewModel = injectViewModel<ProfileViewModel> { profileViewModel }
+    val profiles by profileViewModel.profiles.collectAsStateWithLifecycle()
+    var showProfileTargetSheet by remember { mutableStateOf(false) }
+    var profileTargetAction by remember { mutableStateOf(ProfileTargetAction.ADD) }
     val handler = LocalMediaHandler.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -449,6 +460,30 @@ fun <T : Media> MediaViewSheetDetails(
                 }
             }
         },
+        postInfoItems = {
+            if (currentMedia != null && !currentMedia.isCloud) {
+                item(key = "profile_add") {
+                    ViewerSheetRow(
+                        title = stringResource(Res.string.profile_add_media),
+                        icon = Icons.Outlined.PhotoLibrary,
+                        onClick = {
+                            profileTargetAction = ProfileTargetAction.ADD
+                            showProfileTargetSheet = true
+                        },
+                    )
+                }
+                item(key = "profile_remove") {
+                    ViewerSheetRow(
+                        title = stringResource(Res.string.profile_remove_media),
+                        icon = Icons.Outlined.PhotoLibrary,
+                        onClick = {
+                            profileTargetAction = ProfileTargetAction.REMOVE
+                            showProfileTargetSheet = true
+                        },
+                    )
+                }
+            }
+        },
         metadataEditSheet = { state ->
             currentMedia?.let {
                 MetadataEditSheet(
@@ -488,6 +523,24 @@ fun <T : Media> MediaViewSheetDetails(
             )
         },
         logDebug = ::printDebug,
+    )
+
+    ProfileTargetSheet(
+        visible = showProfileTargetSheet && currentMedia != null && !currentMedia.isCloud,
+        profiles = profiles,
+        action = profileTargetAction,
+        onDismiss = { showProfileTargetSheet = false },
+        onConfirm = { profileIds ->
+            val mediaId = currentMedia?.id
+            if (mediaId != null) {
+                if (profileTargetAction == ProfileTargetAction.ADD) {
+                    profileViewModel.addMediaListToProfiles(profileIds, listOf(mediaId))
+                } else {
+                    profileViewModel.removeMediaListFromProfiles(profileIds, listOf(mediaId))
+                }
+            }
+            showProfileTargetSheet = false
+        }
     )
 
     // App-owned sheets attached to this sheet's state: cloud backup detail + the
