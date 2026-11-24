@@ -37,6 +37,7 @@ import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.People
+import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.RemoveCircleOutline
 import androidx.compose.material.icons.outlined.Restore
@@ -143,6 +144,8 @@ fun AlbumComponent(
     onItemClick: (Album) -> Unit,
     onSelectMultiple: ((Album) -> Unit)? = null,
     isSelected: Boolean = false,
+    onAddToProfile: ((Album) -> Unit)? = null,
+    onRemoveFromProfile: ((Album) -> Unit)? = null,
     onMoveAlbumToTrash: ((Album) -> Unit)? = null,
     onTogglePinClick: ((Album) -> Unit)? = null,
     onToggleIgnoreClick: ((Album) -> Unit)? = null,
@@ -173,6 +176,8 @@ fun AlbumComponent(
             onMoveAlbumToTrash = onMoveAlbumToTrash,
             onTogglePinClick = onTogglePinClick,
             onSelectMultiple = onSelectMultiple,
+            onAddToProfile = onAddToProfile,
+            onRemoveFromProfile = onRemoveFromProfile,
             onToggleIgnoreClick = onToggleIgnoreClick,
             onToggleLockClick = onToggleLockClick,
             onDeleteAlbumThumbnailClick = onDeleteAlbumThumbnailClick,
@@ -338,6 +343,8 @@ fun AlbumRowComponent(
     onItemClick: (Album) -> Unit,
     onSelectMultiple: ((Album) -> Unit)? = null,
     isSelected: Boolean = false,
+    onAddToProfile: ((Album) -> Unit)? = null,
+    onRemoveFromProfile: ((Album) -> Unit)? = null,
     onMoveAlbumToTrash: ((Album) -> Unit)? = null,
     onTogglePinClick: ((Album) -> Unit)? = null,
     onToggleIgnoreClick: ((Album) -> Unit)? = null,
@@ -380,6 +387,8 @@ fun AlbumRowComponent(
             onMoveAlbumToTrash = onMoveAlbumToTrash,
             onTogglePinClick = onTogglePinClick,
             onSelectMultiple = onSelectMultiple,
+            onAddToProfile = onAddToProfile,
+            onRemoveFromProfile = onRemoveFromProfile,
             onToggleIgnoreClick = onToggleIgnoreClick,
             onToggleLockClick = onToggleLockClick,
             onAddToGroup = onAddToGroup,
@@ -482,6 +491,8 @@ fun AlbumOptionSheet(
     onMoveAlbumToTrash: ((Album) -> Unit)? = null,
     onTogglePinClick: ((Album) -> Unit)? = null,
     onSelectMultiple: ((Album) -> Unit)? = null,
+    onAddToProfile: ((Album) -> Unit)? = null,
+    onRemoveFromProfile: ((Album) -> Unit)? = null,
     onToggleIgnoreClick: ((Album) -> Unit)? = null,
     onToggleLockClick: ((Album) -> Unit)? = null,
     onDeleteAlbumThumbnailClick: ((Album) -> Unit)? = null,
@@ -570,6 +581,8 @@ fun AlbumOptionSheet(
         onMoveAlbumToTrash,
         onTogglePinClick,
         onSelectMultiple,
+        onAddToProfile,
+        onRemoveFromProfile,
         onToggleIgnoreClick,
         onToggleLockClick,
         onAddToGroup,
@@ -614,6 +627,34 @@ fun AlbumOptionSheet(
                             scope.launch {
                                 appBottomSheetState.hide()
                                 onSelectMultiple(album)
+                            }
+                        }
+                    )
+                )
+            }
+            if (!isCloudAlbum && onAddToProfile != null) {
+                add(
+                    OptionItem(
+                        icon = Icons.Outlined.PhotoLibrary,
+                        text = stringResource(Res.string.album_add_to_profile),
+                        onClick = {
+                            scope.launch {
+                                appBottomSheetState.hide()
+                                onAddToProfile(album)
+                            }
+                        }
+                    )
+                )
+            }
+            if (!isCloudAlbum && onRemoveFromProfile != null) {
+                add(
+                    OptionItem(
+                        icon = Icons.Outlined.PhotoLibrary,
+                        text = stringResource(Res.string.album_remove_from_profile),
+                        onClick = {
+                            scope.launch {
+                                appBottomSheetState.hide()
+                                onRemoveFromProfile(album)
                             }
                         }
                     )
