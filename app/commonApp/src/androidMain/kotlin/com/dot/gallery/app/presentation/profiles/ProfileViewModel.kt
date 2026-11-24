@@ -7,6 +7,7 @@ package com.dot.gallery.app.presentation.profiles
 import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dot.gallery.core.activeDataStore
@@ -20,8 +21,8 @@ import kotlinx.coroutines.launch
 import me.tatarka.inject.annotations.Inject
 
 /**
- * Owns profile selection and CRUD. The default All Photos entry is virtual:
- * it is represented by Profile.ALL_PHOTOS_ID and is never written to Room.
+ * Owns profile selection and CRUD. The built-in All Photos profile is virtual;
+ * its exclusions are persisted separately because it has no Room row.
  */
 class ProfileViewModel @Inject constructor(
     context: Context,
@@ -39,6 +40,10 @@ class ProfileViewModel @Inject constructor(
         .map { it[ACTIVE_PROFILE_ID] ?: Profile.ALL_PHOTOS_ID }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Profile.ALL_PHOTOS_ID)
 
+    val defaultProfileId = dataStore.data
+        .map { it[DEFAULT_PROFILE_ID] ?: Profile.ALL_PHOTOS_ID }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Profile.ALL_PHOTOS_ID)
+
     val activeProfile = combine(profiles, activeProfileId) { items, activeId ->
         if (activeId == Profile.ALL_PHOTOS_ID) null else items.firstOrNull { it.id == activeId }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
@@ -47,6 +52,14 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             if (profileId == Profile.ALL_PHOTOS_ID || repository.getProfileAsync(profileId) != null) {
                 dataStore.edit { it[ACTIVE_PROFILE_ID] = profileId }
+            }
+        }
+    }
+
+    fun setDefaultProfile(profileId: Long) {
+        viewModelScope.launch {
+            if (profileId == Profile.ALL_PHOTOS_ID || repository.getProfileAsync(profileId) != null) {
+                dataStore.edit { it[DEFAULT_PROFILE_ID] = profileId }
             }
         }
     }
@@ -60,24 +73,80 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun addMediaListToProfile(profileId: Long, mediaIds: List<Long>) {
-        if (profileId == Profile.ALL_PHOTOS_ID || mediaIds.isEmpty()) return
+    fun addMediaListToProfile(profileId: Long, mediaIds: List<Long>) =
+        addMediaListToProfiles(listOf(profileId), mediaIds)
+
+    fun removeMediaListFromProfile(profileId: Long, mediaIds: List<Long>) =
+        removeMediaListFromProfiles(listOf(profileId), mediaIds)
+
+    fun addMediaListToProfiles(profileIds: List<Long>, mediaIds: List<Long>) {
+        val ids = mediaIds.distinct()
+        if (ids.isEmpty()) return
         viewModelScope.launch {
-            repository.addMediaListToProfile(profileId, mediaIds)
+            profileIds.distinct().forEach { profileId ->
+                if (profileId == Profile.ALL_PHOTOS_ID) {
+                    dataStore.edit { prefs ->
+                        prefs[ALL_PHOTOS_EXCLUDED_MEDIA_IDS] =
+                            prefs[ALL_PHOTOS_EXCLUDED_MEDIA_IDS].orEmpty() - ids.map(Long::toString).toSet()
+                    }
+                } else {
+                    repository.addMediaListToProfile(profileId, ids)
+                }
+            }
         }
     }
 
-    fun removeMediaListFromProfile(profileId: Long, mediaIds: List<Long>) {
-        if (profileId == Profile.ALL_PHOTOS_ID || mediaIds.isEmpty()) return
+    fun removeMediaListFromProfiles(profileIds: List<Long>, mediaIds: List<Long>) {
+        val ids = mediaIds.distinct()
+        if (ids.isEmpty()) return
         viewModelScope.launch {
-            mediaIds.distinct().forEach { repository.removeMediaFromProfile(profileId, it) }
+            profileIds.distinct().forEach { profileId ->
+                if (profileId == Profile.ALL_PHOTOS_ID) {
+                    dataStore.edit { prefs ->
+                        prefs[ALL_PHOTOS_EXCLUDED_MEDIA_IDS] =
+                            prefs[ALL_PHOTOS_EXCLUDED_MEDIA_IDS].orEmpty() + ids.map(Long::toString)
+                    }
+                } else {
+                    ids.forEach { repository.removeMediaFromProfile(profileId, it) }
+                }
+            }
         }
     }
 
-    fun addAlbumsToProfile(profileId: Long, albumIds: List<Long>) {
-        if (profileId == Profile.ALL_PHOTOS_ID || albumIds.isEmpty()) return
+    fun addAlbumsToProfile(profileId: Long, albumIds: List<Long>) =
+        addAlbumsToProfiles(listOf(profileId), albumIds)
+
+    fun addAlbumsToProfiles(profileIds: List<Long>, albumIds: List<Long>) {
+        val ids = albumIds.distinct()
+        if (ids.isEmpty()) return
         viewModelScope.launch {
-            repository.addAlbumsToProfile(profileId, albumIds)
+            profileIds.distinct().forEach { profileId ->
+                if (profileId == Profile.ALL_PHOTOS_ID) {
+                    dataStore.edit { prefs ->
+                        prefs[ALL_PHOTOS_EXCLUDED_ALBUM_IDS] =
+                            prefs[ALL_PHOTOS_EXCLUDED_ALBUM_IDS].orEmpty() - ids.map(Long::toString).toSet()
+                    }
+                } else {
+                    repository.addAlbumsToProfile(profileId, ids)
+                }
+            }
+        }
+    }
+
+    fun removeAlbumsFromProfiles(profileIds: List<Long>, albumIds: List<Long>) {
+        val ids = albumIds.distinct()
+        if (ids.isEmpty()) return
+        viewModelScope.launch {
+            profileIds.distinct().forEach { profileId ->
+                if (profileId == Profile.ALL_PHOTOS_ID) {
+                    dataStore.edit { prefs ->
+                        prefs[ALL_PHOTOS_EXCLUDED_ALBUM_IDS] =
+                            prefs[ALL_PHOTOS_EXCLUDED_ALBUM_IDS].orEmpty() + ids.map(Long::toString)
+                    }
+                } else {
+                    ids.forEach { repository.removeAlbumFromProfile(profileId, it) }
+                }
+            }
         }
     }
 
@@ -90,12 +159,8 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun removeAlbumFromProfile(profileId: Long, albumId: Long) {
-        if (profileId == Profile.ALL_PHOTOS_ID) return
-        viewModelScope.launch {
-            repository.removeAlbumFromProfile(profileId, albumId)
-        }
-    }
+    fun removeAlbumFromProfile(profileId: Long, albumId: Long) =
+        removeAlbumsFromProfiles(listOf(profileId), listOf(albumId))
 
     fun renameProfile(profileId: Long, name: String) {
         val normalized = name.trim()
@@ -111,13 +176,23 @@ class ProfileViewModel @Inject constructor(
         if (profileId == Profile.ALL_PHOTOS_ID) return
         viewModelScope.launch {
             repository.deleteProfile(profileId)
-            if (activeProfileId.value == profileId) {
-                dataStore.edit { it[ACTIVE_PROFILE_ID] = Profile.ALL_PHOTOS_ID }
+            dataStore.edit { prefs ->
+                if (prefs[ACTIVE_PROFILE_ID] == profileId) {
+                    prefs[ACTIVE_PROFILE_ID] = Profile.ALL_PHOTOS_ID
+                }
+                if (prefs[DEFAULT_PROFILE_ID] == profileId) {
+                    prefs[DEFAULT_PROFILE_ID] = Profile.ALL_PHOTOS_ID
+                }
             }
         }
     }
 
     companion object {
         private val ACTIVE_PROFILE_ID = longPreferencesKey("active_profile_id")
+        private val DEFAULT_PROFILE_ID = longPreferencesKey("default_profile_id")
+        private val ALL_PHOTOS_EXCLUDED_MEDIA_IDS =
+            stringSetPreferencesKey("all_photos_excluded_media_ids")
+        private val ALL_PHOTOS_EXCLUDED_ALBUM_IDS =
+            stringSetPreferencesKey("all_photos_excluded_album_ids")
     }
 }
