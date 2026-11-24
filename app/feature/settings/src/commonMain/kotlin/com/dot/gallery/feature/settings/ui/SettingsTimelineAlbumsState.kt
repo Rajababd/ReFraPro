@@ -6,6 +6,7 @@
 package com.dot.gallery.feature.settings.ui
 
 import com.dot.gallery.domain.model.AlbumSection
+import com.dot.gallery.domain.model.Profile
 
 data class SettingsTimelineAlbumsState(
     /** `SdkCompat.supportsFavorites` — gates the favorite-icon + search-bar-fav rows. */
@@ -14,4 +15,6 @@ data class SettingsTimelineAlbumsState(
     val albumSections: List<AlbumSection> = emptyList(),
     /** sectionId -> album count, derived from `LocalMediaDistributor.albumsFlow`. */
     val albumCountBySection: Map<Long, Int> = emptyMap(),
+    val profiles: List<Profile> = emptyList(),
+    val defaultProfileId: Long = Profile.ALL_PHOTOS_ID,
 )
