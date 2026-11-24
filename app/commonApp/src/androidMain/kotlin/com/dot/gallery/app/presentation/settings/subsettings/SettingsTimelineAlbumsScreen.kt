@@ -22,6 +22,7 @@ import com.dot.gallery.feature.settings.ui.SettingsTimelineAlbumsActions
 import com.dot.gallery.feature.settings.ui.SettingsTimelineAlbumsContent
 import com.dot.gallery.feature.settings.ui.SettingsTimelineAlbumsState
 import com.dot.gallery.feature.albums.AlbumsViewModel
+import com.dot.gallery.app.presentation.profiles.ProfileViewModel
 import com.dot.gallery.feature.help.domain.SettingsSearchRegistry
 import com.dot.gallery.core.presentation.util.Screen
 import com.dot.gallery.injection.injectViewModel
@@ -39,6 +40,9 @@ fun SettingsTimelineAlbumsScreen() {
     val eventHandler = LocalEventHandler.current
 
     val albumsViewModel = injectViewModel<AlbumsViewModel> {albumsViewModel}
+    val profileViewModel = injectViewModel<ProfileViewModel> { profileViewModel }
+    val profiles by profileViewModel.profiles.collectAsStateWithLifecycle()
+    val defaultProfileId by profileViewModel.defaultProfileId.collectAsStateWithLifecycle()
     val sections by albumsViewModel.sectionsFlow.collectAsStateWithLifecycle()
     val mediaDistributor = LocalMediaDistributor.current
     val albumState by mediaDistributor.albumsFlow.collectAsStateWithLifecycle()
@@ -51,6 +55,8 @@ fun SettingsTimelineAlbumsScreen() {
             supportsFavorites = SdkCompat.supportsFavorites,
             albumSections = sections,
             albumCountBySection = albumCountBySection,
+            profiles = profiles,
+            defaultProfileId = defaultProfileId,
         ),
         actions = SettingsTimelineAlbumsActions(
             onDateFormatClick = { eventHandler.navigate(Screen.DateFormatScreen()) },
@@ -64,6 +70,7 @@ fun SettingsTimelineAlbumsScreen() {
             onReorderSections = albumsViewModel::reorderSections,
             onToggleSectionVisibility = albumsViewModel::toggleSectionVisibility,
             onEnsureDefaultSections = albumsViewModel::ensureDefaultSections,
+            onDefaultProfileSelected = profileViewModel::setDefaultProfile,
             searchSink = SettingsSearchRegistry::register,
             searchRoute = Screen.SettingsTimelineAlbumsScreen(),
         ),
