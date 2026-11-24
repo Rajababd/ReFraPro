@@ -28,16 +28,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.dot.gallery.core.presentation.components.DragHandle
-import com.dot.gallery.core.presentation.components.ExpressiveSheetColumn
-import com.dot.gallery.core.presentation.components.ExpressiveSheetShape
-import com.dot.gallery.core.presentation.components.SheetHeader
 import com.dot.gallery.domain.model.Profile
 import com.dot.gallery.generated.resources.Res
 import com.dot.gallery.generated.resources.profile_add_media
 import com.dot.gallery.generated.resources.profile_all_photos
+import com.dot.gallery.generated.resources.profile_album_selector_save
+import com.dot.gallery.generated.resources.profile_cancel
 import com.dot.gallery.generated.resources.profile_remove_media
-import com.dot.gallery.generated.resources.profile_select_target
-import com.dot.gallery.generated.resources.save
 import org.jetbrains.compose.resources.stringResource
 
 enum class ProfileTargetAction { ADD, REMOVE }
@@ -60,13 +57,19 @@ fun ProfileTargetSheet(
     )
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        dragHandle = { DragHandle(modifier = Modifier.padding(vertical = 5.dp)) },
+        dragHandle = { DragHandle() },
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         tonalElevation = 0.dp,
-        shape = ExpressiveSheetShape,
     ) {
-        ExpressiveSheetColumn {
-            SheetHeader(title = title.ifBlank { stringResource(Res.string.profile_select_target) })
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
             if (action == ProfileTargetAction.REMOVE) {
                 ProfileTargetRow(
                     name = stringResource(Res.string.profile_all_photos),
@@ -88,7 +91,7 @@ fun ProfileTargetSheet(
                 )
             }
             Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
                 horizontalArrangement = Arrangement.End
             ) {
                 TextButton(onClick = onDismiss) {
@@ -98,7 +101,7 @@ fun ProfileTargetSheet(
                     enabled = selectedIds.isNotEmpty(),
                     onClick = { onConfirm(selectedIds.toList()) }
                 ) {
-                    Text(stringResource(Res.string.save))
+                    Text(stringResource(Res.string.profile_album_selector_save))
                 }
             }
         }
