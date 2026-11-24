@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.media.MediaScannerConnection
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.dot.gallery.core.work.isFinished
@@ -1413,6 +1414,7 @@ class MediaDistributorImpl @Inject constructor(
             timelineDateHeaders,
             profileMediaIdsFlow,
             allPhotosExcludedMediaIdsFlow,
+            allPhotosExcludedAlbumIdsFlow,
         ) { values ->
             combineEmissionCount++
             val combineSpan = StartupTracer.begin("$tag.combine_body(#$combineEmissionCount)")
@@ -1444,6 +1446,8 @@ class MediaDistributorImpl @Inject constructor(
             val profileMediaIds = values[13] as Set<Long>?
             @Suppress("UNCHECKED_CAST")
             val allPhotosExcludedMediaIds = values[14] as Set<Long>
+            @Suppress("UNCHECKED_CAST")
+            val allPhotosExcludedAlbumIds = values[15] as Set<Long>
             
             val (defaultDateFormat, extendedDateFormat, weeklyDateFormat) = dateFormats
             
@@ -1471,7 +1475,7 @@ class MediaDistributorImpl @Inject constructor(
                 if (profileMediaIds != null && !isTrash) {
                     removeAll { media -> media.id !in profileMediaIds }
                 } else if (profileMediaIds == null && !isTrash && allPhotosExcludedMediaIds.isNotEmpty()) {
-                    removeAll { media -> media.id in allPhotosExcludedMediaIds || media.albumID in allPhotosExcludedAlbumIdsFlow.first() }
+                    removeAll { media -> media.id in allPhotosExcludedMediaIds || media.albumID in allPhotosExcludedAlbumIds }
                 }
             }
             // Merge cloud media into the unified timeline. When CLOUD_LOCAL is enabled a cloud
