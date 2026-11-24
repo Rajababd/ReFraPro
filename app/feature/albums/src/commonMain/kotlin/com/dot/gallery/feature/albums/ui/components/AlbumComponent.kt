@@ -481,6 +481,7 @@ fun AlbumOptionSheet(
     appBottomSheetState: AppBottomSheetState,
     onMoveAlbumToTrash: ((Album) -> Unit)? = null,
     onTogglePinClick: ((Album) -> Unit)? = null,
+    onSelectMultiple: ((Album) -> Unit)? = null,
     onToggleIgnoreClick: ((Album) -> Unit)? = null,
     onToggleLockClick: ((Album) -> Unit)? = null,
     onDeleteAlbumThumbnailClick: ((Album) -> Unit)? = null,
