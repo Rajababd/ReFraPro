@@ -95,6 +95,8 @@
     <string name="detail_rename">Rename</string>
     <string name="detail_slideshow">Slideshow</string>
     <string name="select_multiple_albums">Select multiple albums</string>
+    <string name="album_add_to_profile">Add album to profile</string>
+    <string name="album_remove_from_profile">Remove album from profile</string>
     <string name="album_selection_count">%1$d albums selected</string>
     <string name="album_selection_delete">Delete</string>
     <string name="album_selection_ignore">Ignore</string>
