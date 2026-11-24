@@ -17,6 +17,7 @@ data class SettingsTimelineAlbumsActions(
     val onReorderSections: (List<Long>) -> Unit = {},
     val onToggleSectionVisibility: (Long, Boolean) -> Unit = { _, _ -> },
     val onEnsureDefaultSections: () -> Unit = {},
+    val onDefaultProfileSelected: (Long) -> Unit = {},
     val searchSink: ((String, List<String>) -> Unit)? = null,
     val searchRoute: String? = null,
 )
