@@ -64,6 +64,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -147,6 +148,13 @@ import com.dot.gallery.feature.albums.generated.resources.album_filter_collectio
 import com.dot.gallery.feature.albums.generated.resources.album_filter_device
 import com.dot.gallery.feature.albums.generated.resources.albums_heading
 import com.dot.gallery.feature.albums.generated.resources.albums_others_section
+import com.dot.gallery.feature.albums.generated.resources.album_selection_count
+import com.dot.gallery.feature.albums.generated.resources.album_selection_delete
+import com.dot.gallery.feature.albums.generated.resources.album_selection_ignore
+import com.dot.gallery.feature.albums.generated.resources.album_selection_add_collection
+import com.dot.gallery.feature.albums.generated.resources.album_selection_add_profile
+import com.dot.gallery.feature.albums.generated.resources.album_selection_remove_profile
+import com.dot.gallery.feature.albums.generated.resources.album_selection_cancel
 import com.dot.gallery.feature.albums.generated.resources.new_collection
 import com.dot.gallery.feature.albums.generated.resources.images_videos
 import com.dot.gallery.feature.albums.generated.resources.media_type_albums_section
