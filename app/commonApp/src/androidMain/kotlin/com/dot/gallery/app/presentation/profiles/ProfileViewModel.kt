@@ -13,6 +13,7 @@ import androidx.lifecycle.viewModelScope
 import com.dot.gallery.core.activeDataStore
 import com.dot.gallery.data.repository.MediaRepository
 import com.dot.gallery.domain.model.Profile
+import com.dot.gallery.domain.util.MediaOrder
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -35,6 +36,13 @@ class ProfileViewModel @Inject constructor(
         SharingStarted.WhileSubscribed(5_000),
         emptyList()
     )
+
+    // This is deliberately sourced from the repository, not MediaDistributor.albumsFlow:
+    // albumsFlow is filtered by the currently active profile and would hide albums that
+    // the user is trying to add back into a profile.
+    val deviceAlbums = repository.getAlbums(MediaOrder.Default)
+        .map { it.data.orEmpty() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val activeProfileId = dataStore.data
         .map { it[ACTIVE_PROFILE_ID] ?: Profile.ALL_PHOTOS_ID }
