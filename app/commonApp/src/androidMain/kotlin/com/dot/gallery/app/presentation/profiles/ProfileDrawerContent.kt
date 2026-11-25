@@ -34,7 +34,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.dot.gallery.core.LocalMediaDistributor
 import com.dot.gallery.domain.model.Profile
 import com.dot.gallery.feature.albums.ui.collections.isSelectableCollectionAlbumId
 import com.dot.gallery.generated.resources.Res
@@ -56,7 +55,7 @@ fun ProfileDrawerContent(onProfileSelected: () -> Unit) {
     val viewModel = injectViewModel<ProfileViewModel> { profileViewModel }
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val activeProfileId by viewModel.activeProfileId.collectAsStateWithLifecycle()
-    val albumsState by LocalMediaDistributor.current.albumsFlow.collectAsStateWithLifecycle()
+    val deviceAlbums by viewModel.deviceAlbums.collectAsStateWithLifecycle()
     var showCreateDialog by rememberSaveable { mutableStateOf(false) }
     var newProfileName by rememberSaveable { mutableStateOf("") }
     var albumTargetProfile by remember { mutableStateOf<Profile?>(null) }
@@ -127,7 +126,7 @@ fun ProfileDrawerContent(onProfileSelected: () -> Unit) {
         ProfileAlbumSelectorSheet(
             profileId = target.id,
             profileName = target.name,
-            albums = albumsState.albums.filter { isSelectableCollectionAlbumId(it.id) },
+            albums = deviceAlbums.filter { isSelectableCollectionAlbumId(it.id) },
             initiallySelectedAlbumIds = selectedAlbumIds,
             onDismiss = { albumTargetProfile = null },
             onSave = { albumIds ->
