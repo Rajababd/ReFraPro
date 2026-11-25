@@ -16,6 +16,9 @@ import com.dot.gallery.feature.settings.generated.resources.merge_albums_preview
 import com.dot.gallery.feature.settings.generated.resources.merge_albums_preview_merged
 import com.dot.gallery.feature.settings.generated.resources.merge_albums_preview_phone
 import com.dot.gallery.feature.settings.generated.resources.merge_albums_preview_sd_card
+import com.dot.gallery.feature.settings.generated.resources.default_profile_title
+import com.dot.gallery.feature.settings.generated.resources.default_profile_description
+import com.dot.gallery.feature.settings.generated.resources.default_profile_all_photos
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.CalendarViewMonth
