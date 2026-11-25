@@ -464,6 +464,7 @@ fun <T : Media> MediaViewSheetDetails(
                 item(key = "profile_add") {
                     ViewerSheetRow(
                         title = stringResource(Res.string.profile_add_media),
+                        summary = null,
                         icon = Icons.Outlined.PhotoLibrary,
                         onClick = {
                             profileTargetAction = ProfileTargetAction.ADD
@@ -474,6 +475,7 @@ fun <T : Media> MediaViewSheetDetails(
                 item(key = "profile_remove") {
                     ViewerSheetRow(
                         title = stringResource(Res.string.profile_remove_media),
+                        summary = null,
                         icon = Icons.Outlined.PhotoLibrary,
                         onClick = {
                             profileTargetAction = ProfileTargetAction.REMOVE
