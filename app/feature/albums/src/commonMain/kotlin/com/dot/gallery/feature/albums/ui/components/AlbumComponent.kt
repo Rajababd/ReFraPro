@@ -104,6 +104,8 @@ import com.dot.gallery.feature.albums.generated.resources.add_to_ignored
 import com.dot.gallery.feature.albums.generated.resources.album_delete_confirm_summary
 import com.dot.gallery.feature.albums.generated.resources.album_delete_confirm_title
 import com.dot.gallery.feature.albums.generated.resources.album_shared_badge
+import com.dot.gallery.feature.albums.generated.resources.album_add_to_profile
+import com.dot.gallery.feature.albums.generated.resources.album_remove_from_profile
 import com.dot.gallery.feature.albums.generated.resources.album_trash_confirm_summary
 import com.dot.gallery.feature.albums.generated.resources.album_trash_confirm_title
 import com.dot.gallery.feature.albums.generated.resources.browse_subfolders
@@ -573,6 +575,9 @@ fun AlbumOptionSheet(
             }
         }
     }
+    val selectMultipleTitle = stringResource(Res.string.select_multiple_albums)
+    val addToProfileTitle = stringResource(Res.string.album_add_to_profile)
+    val removeFromProfileTitle = stringResource(Res.string.album_remove_from_profile)
     val errorContainer = MaterialTheme.colorScheme.errorContainer
     val onErrorContainer = MaterialTheme.colorScheme.onErrorContainer
     val optionList = remember(
@@ -622,7 +627,7 @@ fun AlbumOptionSheet(
                 add(
                     OptionItem(
                         icon = Icons.Outlined.SelectAll,
-                        text = stringResource(Res.string.select_multiple_albums),
+                        text = selectMultipleTitle,
                         onClick = {
                             scope.launch {
                                 appBottomSheetState.hide()
@@ -636,7 +641,7 @@ fun AlbumOptionSheet(
                 add(
                     OptionItem(
                         icon = Icons.Outlined.PhotoLibrary,
-                        text = stringResource(Res.string.album_add_to_profile),
+                        text = addToProfileTitle,
                         onClick = {
                             scope.launch {
                                 appBottomSheetState.hide()
@@ -650,7 +655,7 @@ fun AlbumOptionSheet(
                 add(
                     OptionItem(
                         icon = Icons.Outlined.PhotoLibrary,
-                        text = stringResource(Res.string.album_remove_from_profile),
+                        text = removeFromProfileTitle,
                         onClick = {
                             scope.launch {
                                 appBottomSheetState.hide()
