@@ -40,6 +40,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
+      - name: Run common app host tests
+        run: ./gradlew --no-daemon :app:commonApp:testAndroidHostTest
       - name: Build optimized ARM64 NoML APK
         run: ./gradlew --no-daemon :app:androidApp:assembleArm64-v8aNoMLOptimized
       - name: Verify optimized APK output
