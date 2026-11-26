@@ -61,7 +61,7 @@ class ProfileViewModel @Inject constructor(
             }
         }
         .map { it[ACTIVE_PROFILE_ID] ?: Profile.ALL_PHOTOS_ID }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Profile.ALL_PHOTOS_ID)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, Profile.ALL_PHOTOS_ID)
 
     val lockedProfileIds = dataStore.data
         .map { prefs -> prefs[LOCKED_PROFILE_IDS].orEmpty().mapNotNull(String::toLongOrNull).toSet() }
