@@ -12,10 +12,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dot.gallery.core.activeDataStore
 import com.dot.gallery.data.repository.MediaRepository
+import com.dot.gallery.domain.model.Album
 import com.dot.gallery.domain.model.Profile
 import com.dot.gallery.domain.util.MediaOrder
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -158,12 +161,61 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun albumIdsInProfile(profileId: Long) = repository.getAlbumIdsInProfile(profileId)
+    fun albumIdsInProfile(profileId: Long): Flow<List<Long>> =
+        if (profileId == Profile.ALL_PHOTOS_ID) {
+            combine(deviceAlbums, dataStore.data) { albums, prefs ->
+                val excluded = prefs[ALL_PHOTOS_EXCLUDED_ALBUM_IDS].orEmpty()
+                albums.asSequence().map { it.id }
+                    .filterNot { it.toString() in excluded }
+                    .toList()
+            }
+        } else {
+            repository.getAlbumIdsInProfile(profileId)
+        }
+
+    /** Albums visible inside a profile; All Photos is computed from its persisted exclusions. */
+    fun albumsInProfile(profileId: Long): Flow<List<Album>> =
+        if (profileId == Profile.ALL_PHOTOS_ID) {
+            combine(deviceAlbums, dataStore.data) { albums, prefs ->
+                val excluded = prefs[ALL_PHOTOS_EXCLUDED_ALBUM_IDS].orEmpty()
+                albums.filterNot { it.id.toString() in excluded }
+            }
+        } else {
+            combine(deviceAlbums, repository.getAlbumIdsInProfile(profileId)) { albums, ids ->
+                val included = ids.toHashSet()
+                albums.filter { it.id in included }
+            }
+        }
+
+    /** Profiles that already contain at least one of the selected albums. */
+    suspend fun profilesContainingAlbums(albumIds: List<Long>): Set<Long> {
+        val ids = albumIds.distinct().toSet()
+        if (ids.isEmpty()) return emptySet()
+        val result = mutableSetOf<Long>()
+        val excluded = dataStore.data.first()[ALL_PHOTOS_EXCLUDED_ALBUM_IDS].orEmpty()
+        val allPhotosIds = deviceAlbums.value.asSequence().map { it.id }
+            .filterNot { it.toString() in excluded }
+            .toSet()
+        if (ids.any { it in allPhotosIds }) result += Profile.ALL_PHOTOS_ID
+        profiles.value.forEach { profile ->
+            val included = repository.getAlbumIdsInProfile(profile.id).first().toHashSet()
+            if (ids.any { it in included }) result += profile.id
+        }
+        return result
+    }
 
     fun replaceAlbumsInProfile(profileId: Long, albumIds: List<Long>) {
-        if (profileId == Profile.ALL_PHOTOS_ID) return
+        val selected = albumIds.distinct().toSet()
         viewModelScope.launch {
-            repository.replaceAlbumsInProfile(profileId, albumIds.distinct())
+            if (profileId == Profile.ALL_PHOTOS_ID) {
+                val allDeviceIds = deviceAlbums.value.map { it.id }.toSet()
+                dataStore.edit { prefs ->
+                    prefs[ALL_PHOTOS_EXCLUDED_ALBUM_IDS] =
+                        (allDeviceIds - selected).map(Long::toString).toSet()
+                }
+            } else {
+                repository.replaceAlbumsInProfile(profileId, selected.toList())
+            }
         }
     }
 
