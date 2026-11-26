@@ -332,7 +332,8 @@ class MainActivity : AppCompatActivity() {
                                 Scaffold(
                                     modifier = Modifier.fillMaxSize(),
                                     content = { paddingValues ->
-                                        AppBarContainer(
+                                        ProfileLockGateContent {
+                                            AppBarContainer(
                                             navController = navController,
                                             paddingValues = paddingValues,
                                             bottomBarState = bottomBarState.value,
@@ -404,7 +405,6 @@ class MainActivity : AppCompatActivity() {
                                                 }).toDp()
                                             }
                                             Box(Modifier.fillMaxSize()) {
-                                            ProfileLockGateContent {
                                                 NavigationComp(
                                                     navController = navController,
                                                     sharedTransitionScope = sharedTransitionScope,
@@ -431,7 +431,7 @@ class MainActivity : AppCompatActivity() {
                                                 )
                                                 CrashReportPrompt()
                                             }
-                                            }
+                                        }
                                         }
                                     }
                                 )
