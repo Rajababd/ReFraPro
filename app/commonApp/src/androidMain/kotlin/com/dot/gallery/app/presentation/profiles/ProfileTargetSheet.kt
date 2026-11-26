@@ -45,11 +45,14 @@ fun ProfileTargetSheet(
     visible: Boolean,
     profiles: List<Profile>,
     action: ProfileTargetAction,
+    initiallySelectedProfileIds: Set<Long> = emptySet(),
     onDismiss: () -> Unit,
     onConfirm: (List<Long>) -> Unit,
 ) {
     if (!visible) return
-    var selectedIds by remember(visible, action) { mutableStateOf(emptySet<Long>()) }
+    var selectedIds by remember(visible, action, initiallySelectedProfileIds) {
+        mutableStateOf(initiallySelectedProfileIds)
+    }
     val allPhotosId = Profile.ALL_PHOTOS_ID
     val title = stringResource(
         if (action == ProfileTargetAction.ADD) Res.string.profile_add_media
@@ -70,7 +73,7 @@ fun ProfileTargetSheet(
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
-            if (action == ProfileTargetAction.REMOVE) {
+            {
                 ProfileTargetRow(
                     name = stringResource(Res.string.profile_all_photos),
                     selected = allPhotosId in selectedIds,
