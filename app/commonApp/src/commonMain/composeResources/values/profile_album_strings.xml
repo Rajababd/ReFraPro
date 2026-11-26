@@ -2,4 +2,6 @@
     <string name="profile_album_selector_title">Add albums to profile</string>
     <string name="profile_album_selector_save">Save selection</string>
     <string name="profile_album_selector_count">%1$d items</string>
+    <string name="profile_settings_title">Profile settings</string>
+    <string name="profile_rename">Rename</string>
 </resources>
