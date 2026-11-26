@@ -1218,26 +1218,6 @@ fun AlbumsContent(
                 )
                 TextButton(
                     onClick = {
-                        selectedAlbums.forEach(onMoveAlbumToTrash)
-                        clearAlbumSelection()
-                    }
-                ) { Text(stringResource(Res.string.album_selection_delete)) }
-                TextButton(
-                    onClick = {
-                        selectedAlbums.forEach(onIgnoreAlbum)
-                        clearAlbumSelection()
-                    }
-                ) { Text(stringResource(Res.string.album_selection_ignore)) }
-                if (onAddAlbumsToCollection != null) {
-                    TextButton(
-                        onClick = {
-                            onAddAlbumsToCollection(selectedAlbumIdsForAction)
-                            clearAlbumSelection()
-                        }
-                    ) { Text(stringResource(Res.string.album_selection_add_collection)) }
-                }
-                TextButton(
-                    onClick = {
                         onAddAlbumsToProfiles(selectedAlbumIdsForAction)
                         clearAlbumSelection()
                     }
@@ -1248,6 +1228,26 @@ fun AlbumsContent(
                         clearAlbumSelection()
                     }
                 ) { Text(stringResource(Res.string.album_selection_remove_profile)) }
+                if (onAddAlbumsToCollection != null) {
+                    TextButton(
+                        onClick = {
+                            onAddAlbumsToCollection(selectedAlbumIdsForAction)
+                            clearAlbumSelection()
+                        }
+                    ) { Text(stringResource(Res.string.album_selection_add_collection)) }
+                }
+                TextButton(
+                    onClick = {
+                        selectedAlbums.forEach(onMoveAlbumToTrash)
+                        clearAlbumSelection()
+                    }
+                ) { Text(stringResource(Res.string.album_selection_delete)) }
+                TextButton(
+                    onClick = {
+                        selectedAlbums.forEach(onIgnoreAlbum)
+                        clearAlbumSelection()
+                    }
+                ) { Text(stringResource(Res.string.album_selection_ignore)) }
                 TextButton(onClick = clearAlbumSelection) {
                     Text(stringResource(Res.string.album_selection_cancel))
                 }
