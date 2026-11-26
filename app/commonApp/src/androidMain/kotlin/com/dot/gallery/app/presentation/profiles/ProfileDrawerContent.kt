@@ -4,6 +4,7 @@
  */
 package com.dot.gallery.app.presentation.profiles
 
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -44,6 +45,8 @@ import com.dot.gallery.generated.resources.profile_cancel
 import com.dot.gallery.generated.resources.profile_create
 import com.dot.gallery.generated.resources.profile_create_title
 import com.dot.gallery.generated.resources.profile_name_hint
+import com.dot.gallery.generated.resources.profile_settings_title
+import com.dot.gallery.generated.resources.profile_rename
 import com.dot.gallery.injection.injectViewModel
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -55,10 +58,17 @@ fun ProfileDrawerContent(onProfileSelected: () -> Unit) {
     val viewModel = injectViewModel<ProfileViewModel> { profileViewModel }
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val activeProfileId by viewModel.activeProfileId.collectAsStateWithLifecycle()
-    val deviceAlbums by viewModel.deviceAlbums.collectAsStateWithLifecycle()
+    val activeAlbumsFlow = remember(activeProfileId) { viewModel.albumsInProfile(activeProfileId) }
+    val activeAlbums by activeAlbumsFlow.collectAsStateWithLifecycle(initialValue = emptyList())
     var showCreateDialog by rememberSaveable { mutableStateOf(false) }
     var newProfileName by rememberSaveable { mutableStateOf("") }
     var albumTargetProfile by remember { mutableStateOf<Profile?>(null) }
+    var profileSettingsTarget by remember { mutableStateOf<Profile?>(null) }
+    var editedProfileName by rememberSaveable { mutableStateOf("") }
+    val allPhotosName = stringResource(Res.string.profile_all_photos)
+    val allPhotosProfile = remember(allPhotosName) {
+        Profile(id = Profile.ALL_PHOTOS_ID, name = allPhotosName)
+    }
 
     val targetAlbumIdsFlow = remember(albumTargetProfile?.id) {
         albumTargetProfile?.let { target ->
@@ -79,28 +89,47 @@ fun ProfileDrawerContent(onProfileSelected: () -> Unit) {
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
             )
-            NavigationDrawerItem(
-                label = { Text(stringResource(Res.string.profile_all_photos)) },
-                selected = activeProfileId == Profile.ALL_PHOTOS_ID,
-                onClick = {
-                    viewModel.selectProfile(Profile.ALL_PHOTOS_ID)
-                    onProfileSelected()
-                },
-                icon = { Icon(Icons.Outlined.Photo, contentDescription = null) }
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                NavigationDrawerItem(
+                    modifier = Modifier.weight(1f),
+                    label = { Text(allPhotosName) },
+                    selected = activeProfileId == Profile.ALL_PHOTOS_ID,
+                    onClick = {
+                        viewModel.selectProfile(Profile.ALL_PHOTOS_ID)
+                        onProfileSelected()
+                    },
+                    icon = { Icon(Icons.Outlined.Photo, contentDescription = null) }
+                )
+                IconButton(onClick = { albumTargetProfile = allPhotosProfile }) {
+                    Icon(
+                        imageVector = Icons.Outlined.Add,
+                        contentDescription = stringResource(Res.string.profile_add_album),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             profiles.forEach { profile ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     NavigationDrawerItem(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).combinedClickable(
+                            onClick = {
+                                viewModel.selectProfile(profile.id)
+                                onProfileSelected()
+                            },
+                            onLongClick = {
+                                profileSettingsTarget = profile
+                                editedProfileName = profile.name
+                            }
+                        ),
                         label = { Text(profile.name) },
                         selected = activeProfileId == profile.id,
-                        onClick = {
-                            viewModel.selectProfile(profile.id)
-                            onProfileSelected()
-                        },
+                        onClick = {},
                         icon = { Icon(Icons.Outlined.Photo, contentDescription = null) }
                     )
                     IconButton(onClick = { albumTargetProfile = profile }) {
@@ -126,13 +155,49 @@ fun ProfileDrawerContent(onProfileSelected: () -> Unit) {
         ProfileAlbumSelectorSheet(
             profileId = target.id,
             profileName = target.name,
-            albums = deviceAlbums.filter { isSelectableCollectionAlbumId(it.id) },
+            albums = activeAlbums.filter { isSelectableCollectionAlbumId(it.id) },
             initiallySelectedAlbumIds = selectedAlbumIds,
             onDismiss = { albumTargetProfile = null },
             onSave = { albumIds ->
                 viewModel.replaceAlbumsInProfile(target.id, albumIds)
                 albumTargetProfile = null
             },
+        )
+    }
+
+    profileSettingsTarget?.let { target ->
+        AlertDialog(
+            onDismissRequest = {
+                profileSettingsTarget = null
+                editedProfileName = ""
+            },
+            title = { Text(stringResource(Res.string.profile_settings_title)) },
+            text = {
+                OutlinedTextField(
+                    value = editedProfileName,
+                    onValueChange = { editedProfileName = it },
+                    label = { Text(stringResource(Res.string.profile_name_hint)) },
+                    singleLine = true,
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = editedProfileName.isNotBlank() && editedProfileName.trim() != target.name,
+                    onClick = {
+                        viewModel.renameProfile(target.id, editedProfileName)
+                        profileSettingsTarget = null
+                        editedProfileName = ""
+                    }
+                ) { Text(stringResource(Res.string.profile_rename)) }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        profileSettingsTarget = null
+                        editedProfileName = ""
+                    }
+                ) { Text(stringResource(Res.string.profile_cancel)) }
+            }
         )
     }
 
