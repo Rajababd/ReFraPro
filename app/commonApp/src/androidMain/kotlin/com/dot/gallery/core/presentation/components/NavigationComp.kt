@@ -831,7 +831,7 @@ fun NavigationComp(
                     onContentDrawn = onLibraryContentDrawn,
                     minCellWidth = albumsMinCellWidth,
                     isScrolling = isScrolling,
-                    onAlbumClick = onGroupAlbumClick,
+                    onAlbumClick = onAlbumClickWithLock,
                     onAlbumLongClick = albumsViewModel.onAlbumLongClick,
                     filterOptions = albumsViewModel.rememberFilters(),
                     onMoveAlbumToTrash = albumsViewModel::moveAlbumToTrash,
@@ -1092,7 +1092,7 @@ fun NavigationComp(
 
                 AlbumGroupViewScreen(
                     groupId = groupId,
-                    onAlbumClick = onAlbumClickWithLock,
+                    onAlbumClick = onGroupAlbumClick,
                     onAlbumLongClick = albumsViewModel.onAlbumLongClick,
                     onMoveAlbumToTrash = albumsViewModel::moveAlbumToTrash,
                     onIgnoreAlbum = albumsViewModel::addAlbumToIgnored,
