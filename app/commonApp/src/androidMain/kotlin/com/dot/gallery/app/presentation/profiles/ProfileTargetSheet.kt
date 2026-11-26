@@ -73,16 +73,14 @@ fun ProfileTargetSheet(
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
-            {
-                ProfileTargetRow(
-                    name = stringResource(Res.string.profile_all_photos),
-                    selected = allPhotosId in selectedIds,
-                    onToggle = {
-                        selectedIds = if (allPhotosId in selectedIds) selectedIds - allPhotosId
-                        else selectedIds + allPhotosId
-                    }
-                )
-            }
+            ProfileTargetRow(
+                name = stringResource(Res.string.profile_all_photos),
+                selected = allPhotosId in selectedIds,
+                onToggle = {
+                    selectedIds = if (allPhotosId in selectedIds) selectedIds - allPhotosId
+                    else selectedIds + allPhotosId
+                }
+            )
             profiles.forEach { profile ->
                 ProfileTargetRow(
                     name = profile.name,
