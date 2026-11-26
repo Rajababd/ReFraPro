@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -114,6 +115,13 @@ fun AlbumsScreen(
     var profileTargetAction by rememberSaveable { mutableStateOf(ProfileTargetAction.ADD) }
     var showAddToCollectionSheet by rememberSaveable { mutableStateOf(false) }
     var pendingAlbumIds by rememberSaveable { mutableStateOf(emptyList<Long>()) }
+    var initiallySelectedProfileIds by remember { mutableStateOf(emptySet<Long>()) }
+
+    LaunchedEffect(showProfileTargetSheet, pendingAlbumIds, profiles) {
+        initiallySelectedProfileIds = if (showProfileTargetSheet) {
+            profileViewModel.profilesContainingAlbums(pendingAlbumIds)
+        } else emptySet()
+    }
 
     Box(Modifier.fillMaxSize()) {
     AlbumsContent(
@@ -210,6 +218,7 @@ fun AlbumsScreen(
         visible = showProfileTargetSheet,
         profiles = profiles,
         action = profileTargetAction,
+        initiallySelectedProfileIds = initiallySelectedProfileIds,
         onDismiss = { showProfileTargetSheet = false },
         onConfirm = { profileIds ->
             if (profileTargetAction == ProfileTargetAction.ADD) {
