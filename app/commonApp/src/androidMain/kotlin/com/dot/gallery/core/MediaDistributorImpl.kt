@@ -250,7 +250,7 @@ class MediaDistributorImpl @Inject constructor(
 
     private val profileAlbumIdsFlow: Flow<Set<Long>?> = activeProfileIdFlow.flatMapLatest { profileId ->
         if (profileId == Profile.ALL_PHOTOS_ID) flowOf(null)
-        else if (profileId == ProfileAccessSession.LOCKED_PROFILE_ID) flowOf(emptySet())
+        else if (profileId == ProfileAccessSession.LOCKED_PROFILE_ID) flowOf(emptySet<Long>())
         else repository.getAlbumIdsInProfile(profileId).map { it.toSet() }
     }
 
