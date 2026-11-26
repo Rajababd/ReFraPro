@@ -204,6 +204,40 @@ class ProfileViewModel @Inject constructor(
         return result
     }
 
+    /**
+     * Updates only the albums shown by the active profile's selector.
+     * Membership outside [sourceAlbumIds] is preserved in the target profile.
+     */
+    fun replaceAlbumsInProfileWithinSource(
+        profileId: Long,
+        sourceAlbumIds: List<Long>,
+        selectedAlbumIds: List<Long>,
+    ) {
+        val source = sourceAlbumIds.distinct().toSet()
+        val selected = selectedAlbumIds.distinct().toSet().intersect(source)
+        if (source.isEmpty()) return
+        viewModelScope.launch {
+            if (profileId == Profile.ALL_PHOTOS_ID) {
+                dataStore.edit { prefs ->
+                    val oldExcluded = prefs[ALL_PHOTOS_EXCLUDED_ALBUM_IDS].orEmpty()
+                    val preservedOutsideSource = oldExcluded.filterNot { raw ->
+                        raw.toLongOrNull() in source
+                    }.toSet()
+                    val excludedWithinSource = (source - selected).map(Long::toString).toSet()
+                    prefs[ALL_PHOTOS_EXCLUDED_ALBUM_IDS] = preservedOutsideSource + excludedWithinSource
+                }
+            } else {
+                val current = repository.getAlbumIdsInProfile(profileId).first().toSet()
+                (current intersect source - selected).forEach { albumId ->
+                    repository.removeAlbumFromProfile(profileId, albumId)
+                }
+                (selected - current).forEach { albumId ->
+                    repository.addAlbumsToProfile(profileId, listOf(albumId))
+                }
+            }
+        }
+    }
+
     fun replaceAlbumsInProfile(profileId: Long, albumIds: List<Long>) {
         val selected = albumIds.distinct().toSet()
         viewModelScope.launch {
