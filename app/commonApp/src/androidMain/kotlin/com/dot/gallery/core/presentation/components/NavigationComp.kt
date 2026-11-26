@@ -236,6 +236,121 @@ private fun contentCredentialUuid(kind: String, id: Long): Uuid {
     return Uuid.parse("$prefix-0000-0000-0000-$suffix")
 }
 
+/** Reuses the existing password/biometric gate whenever a locked album is opened. */
+@Composable
+private fun rememberAlbumOpenWithLock(onOpenAlbum: (Album) -> Unit): (Album) -> Unit {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val securitySheetState = rememberAppBottomSheetState()
+    var pendingAlbum by remember { mutableStateOf<Album?>(null) }
+    var password by rememberSaveable { mutableStateOf("") }
+    var error by rememberSaveable { mutableStateOf("") }
+    var showPasswordDialog by remember { mutableStateOf(false) }
+    val invalidPassword = stringResource(Res.string.profile_password_invalid)
+    val biometricState = rememberBiometricState(
+        title = stringResource(Res.string.biometric_authentication),
+        subtitle = stringResource(Res.string.unlock_album_biometric_subtitle),
+        onSuccess = {
+            pendingAlbum?.let(onOpenAlbum)
+            pendingAlbum = null
+            showPasswordDialog = false
+            password = ""
+            error = ""
+        },
+        onFailed = {
+            pendingAlbum = null
+            showPasswordDialog = false
+            password = ""
+            error = ""
+        }
+    )
+
+    SecurityInfoSheet(sheetState = securitySheetState)
+    if (showPasswordDialog) {
+        pendingAlbum?.let { album ->
+            AlertDialog(
+                onDismissRequest = {
+                    pendingAlbum = null
+                    showPasswordDialog = false
+                    password = ""
+                    error = ""
+                },
+                title = { Text(album.label) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = password,
+                            onValueChange = { password = it; error = "" },
+                            label = { Text(stringResource(Res.string.profile_password)) },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation()
+                        )
+                        if (error.isNotBlank()) {
+                            Text(error, color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        enabled = password.isNotEmpty(),
+                        onClick = {
+                            scope.launch {
+                                val credentialId = contentCredentialUuid("album", album.id)
+                                when (VaultPasswordManager.verifyPassword(context, credentialId, password)) {
+                                    VerifyResult.Success -> {
+                                        onOpenAlbum(album)
+                                        pendingAlbum = null
+                                        showPasswordDialog = false
+                                        password = ""
+                                        error = ""
+                                    }
+                                    is VerifyResult.Failed, is VerifyResult.LockedOut -> error = invalidPassword
+                                }
+                            }
+                        }
+                    ) { Text(stringResource(Res.string.content_lock_unlock)) }
+                },
+                dismissButton = {
+                    Row {
+                        if (biometricState.isSupported) {
+                            TextButton(onClick = { biometricState.authenticate() }) {
+                                Text(stringResource(Res.string.profile_use_biometric))
+                            }
+                        }
+                        TextButton(onClick = {
+                            pendingAlbum = null
+                            showPasswordDialog = false
+                            password = ""
+                            error = ""
+                        }) { Text(stringResource(Res.string.action_cancel)) }
+                    }
+                }
+            )
+        }
+    }
+
+    return { album ->
+        if (!album.isLocked) {
+            onOpenAlbum(album)
+        } else {
+            pendingAlbum = album
+            password = ""
+            error = ""
+            scope.launch {
+                val credentialId = contentCredentialUuid("album", album.id)
+                if (VaultPasswordManager.hasCustomPassword(context, credentialId)) {
+                    showPasswordDialog = true
+                } else if (biometricState.isSupported) {
+                    biometricState.authenticate()
+                } else {
+                    pendingAlbum = null
+                    securitySheetState.show()
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalPermissionsApi::class)
 @Stable
 @NonRestartableComposable
@@ -930,6 +1045,9 @@ fun NavigationComp(
                 val argumentAlbumId = remember(backStackEntry) {
                     backStackEntry.arguments?.getLong("albumId") ?: -1
                 }
+                val onMergedAlbumClick = rememberAlbumOpenWithLock { album ->
+                    navController.navigate(Screen.AlbumViewScreen.album(album.id, album.label))
+                }
                 val albumViewModel = injectViewModel<AlbumTimelineViewModel>(viewModelStoreOwner = backStackEntry) {albumTimelineViewModel(it)}
                 val albumInitialSnapshot = remember(backStackEntry) { albumViewModel.mediaState.value }
                 LaunchedEffect(backStackEntry) {
@@ -942,9 +1060,7 @@ fun NavigationComp(
                     paddingValues = paddingValues,
                     albumMediaState = albumMediaState,
                     metadataState = metadataState(),
-                    onAlbumClick = { album ->
-                        navController.navigate(Screen.AlbumViewScreen.album(album.id, album.label))
-                    },
+                    onAlbumClick = onMergedAlbumClick,
                     isScrolling = isScrolling,
                     sharedTransitionScope = sharedTransitionScope,
                     animatedContentScope = this
@@ -964,118 +1080,8 @@ fun NavigationComp(
                 }
                 val albumsViewModel = injectViewModel<AlbumsViewModel> {albumsViewModel}
                 val groupViewScope = rememberCoroutineScope()
-                val groupAlbumSecuritySheetState = rememberAppBottomSheetState()
-                val groupAlbumContext = LocalContext.current
-                var pendingGroupAlbum by remember { mutableStateOf<Album?>(null) }
-                var groupAlbumPassword by rememberSaveable { mutableStateOf("") }
-                var groupAlbumPasswordError by rememberSaveable { mutableStateOf("") }
-                var showGroupAlbumPasswordDialog by remember { mutableStateOf(false) }
-                val groupAlbumPasswordInvalid = stringResource(Res.string.profile_password_invalid)
-                val groupAlbumBiometricState = rememberBiometricState(
-                    title = stringResource(Res.string.biometric_authentication),
-                    subtitle = stringResource(Res.string.unlock_album_biometric_subtitle),
-                    onSuccess = {
-                        pendingGroupAlbum?.let { album ->
-                            albumsViewModel.onAlbumClick(eventHandler::navigate)(album)
-                        }
-                        pendingGroupAlbum = null
-                        showGroupAlbumPasswordDialog = false
-                    },
-                    onFailed = {
-                        pendingGroupAlbum = null
-                        showGroupAlbumPasswordDialog = false
-                    }
-                )
-                val onGroupAlbumClick: (Album) -> Unit = { album ->
-                    if (album.isLocked) {
-                        pendingGroupAlbum = album
-                        groupAlbumPassword = ""
-                        groupAlbumPasswordError = ""
-                        groupViewScope.launch {
-                            val credentialId = contentCredentialUuid("album", album.id)
-                            if (VaultPasswordManager.hasCustomPassword(groupAlbumContext, credentialId)) {
-                                showGroupAlbumPasswordDialog = true
-                            } else if (groupAlbumBiometricState.isSupported) {
-                                groupAlbumBiometricState.authenticate()
-                            } else {
-                                pendingGroupAlbum = null
-                                groupAlbumSecuritySheetState.show()
-                            }
-                        }
-                    } else {
-                        albumsViewModel.onAlbumClick(eventHandler::navigate)(album)
-                    }
-                }
-                SecurityInfoSheet(sheetState = groupAlbumSecuritySheetState)
-                if (showGroupAlbumPasswordDialog) {
-                    pendingGroupAlbum?.let { album ->
-                        AlertDialog(
-                            onDismissRequest = {
-                                pendingGroupAlbum = null
-                                showGroupAlbumPasswordDialog = false
-                                groupAlbumPassword = ""
-                                groupAlbumPasswordError = ""
-                            },
-                            title = { Text(album.label) },
-                            text = {
-                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    OutlinedTextField(
-                                        value = groupAlbumPassword,
-                                        onValueChange = {
-                                            groupAlbumPassword = it
-                                            groupAlbumPasswordError = ""
-                                        },
-                                        label = { Text(stringResource(Res.string.profile_password)) },
-                                        singleLine = true,
-                                        visualTransformation = PasswordVisualTransformation()
-                                    )
-                                    if (groupAlbumPasswordError.isNotBlank()) {
-                                        Text(groupAlbumPasswordError, color = MaterialTheme.colorScheme.error)
-                                    }
-                                }
-                            },
-                            confirmButton = {
-                                TextButton(
-                                    enabled = groupAlbumPassword.isNotEmpty(),
-                                    onClick = {
-                                        groupViewScope.launch {
-                                            val credentialId = contentCredentialUuid("album", album.id)
-                                            when (VaultPasswordManager.verifyPassword(
-                                                groupAlbumContext,
-                                                credentialId,
-                                                groupAlbumPassword
-                                            )) {
-                                                VerifyResult.Success -> {
-                                                    albumsViewModel.onAlbumClick(eventHandler::navigate)(album)
-                                                    pendingGroupAlbum = null
-                                                    showGroupAlbumPasswordDialog = false
-                                                    groupAlbumPassword = ""
-                                                    groupAlbumPasswordError = ""
-                                                }
-                                                is VerifyResult.Failed, is VerifyResult.LockedOut ->
-                                                    groupAlbumPasswordError = groupAlbumPasswordInvalid
-                                            }
-                                        }
-                                    }
-                                ) { Text(stringResource(Res.string.content_lock_unlock)) }
-                            },
-                            dismissButton = {
-                                Row {
-                                    if (groupAlbumBiometricState.isSupported) {
-                                        TextButton(onClick = { groupAlbumBiometricState.authenticate() }) {
-                                            Text(stringResource(Res.string.profile_use_biometric))
-                                        }
-                                    }
-                                    TextButton(onClick = {
-                                        pendingGroupAlbum = null
-                                        showGroupAlbumPasswordDialog = false
-                                        groupAlbumPassword = ""
-                                        groupAlbumPasswordError = ""
-                                    }) { Text(stringResource(Res.string.action_cancel)) }
-                                }
-                            }
-                        )
-                    }
+                val onGroupAlbumClick = rememberAlbumOpenWithLock { album ->
+                    albumsViewModel.onAlbumClick(eventHandler::navigate)(album)
                 }
                 val groupViewRenameSheetState = rememberAppBottomSheetState()
                 var groupViewRenameGroupId by remember { mutableStateOf<Long?>(null) }

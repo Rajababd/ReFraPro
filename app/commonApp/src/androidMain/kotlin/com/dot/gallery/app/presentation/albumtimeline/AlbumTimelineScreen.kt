@@ -99,6 +99,7 @@ import com.dot.gallery.core.presentation.components.mediaDateRangeLabel
 import com.dot.gallery.core.presentation.components.rememberDetailHeaderCollapsed
 import com.dot.gallery.feature.albums.ui.components.AlbumSortPill
 import com.dot.gallery.feature.albums.ui.components.AlbumSortTopBarAction
+import com.dot.gallery.feature.albums.ui.components.LockedAlbumThumbnail
 import androidx.compose.material.icons.outlined.PhotoAlbum
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import com.dot.gallery.generated.resources.more_options
@@ -618,16 +619,24 @@ private fun AlbumsMergedBanner(
                             .width(72.dp)
                             .clickable { onAlbumClick(album) }
                     ) {
-                        AsyncImage(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .clip(RoundedCornerShape(12.dp)),
-                            request = ComposableImageRequest(album.uri.toString()) {
-                                thumbnail(album.uri.toString())
-                            },
-                            contentDescription = album.label,
-                            contentScale = ContentScale.Crop
-                        )
+                        if (album.isLocked) {
+                            LockedAlbumThumbnail(
+                                modifier = Modifier.size(64.dp),
+                                iconModifier = Modifier.size(28.dp),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                        } else {
+                            AsyncImage(
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .clip(RoundedCornerShape(12.dp)),
+                                request = ComposableImageRequest(album.uri.toString()) {
+                                    thumbnail(album.uri.toString())
+                                },
+                                contentDescription = album.label,
+                                contentScale = ContentScale.Crop
+                            )
+                        }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = album.relativePath.removeSuffix("/"),
