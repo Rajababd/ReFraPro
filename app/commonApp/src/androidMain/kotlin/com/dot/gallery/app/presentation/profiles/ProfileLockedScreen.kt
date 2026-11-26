@@ -118,13 +118,19 @@ fun ProfileLockedScreen(profileId: Long) {
     }
 }
 
+/**
+ * Replaces the navigation content entirely while the selected profile is locked.
+ * The protected screens are not kept underneath an overlay in the composition.
+ */
 @Composable
-fun ProfileLockGateOverlay() {
+fun ProfileLockGateContent(content: @Composable () -> Unit) {
     val viewModel = injectViewModel<ProfileViewModel> { profileViewModel }
     val rawActiveId by viewModel.rawActiveProfileId.collectAsState()
     val lockedIds by viewModel.lockedProfileIds.collectAsState()
     val unlockedIds by ProfileAccessSession.unlockedProfileIds.collectAsState()
     if (rawActiveId in lockedIds && rawActiveId !in unlockedIds) {
         ProfileLockedScreen(profileId = rawActiveId)
+    } else {
+        content()
     }
 }

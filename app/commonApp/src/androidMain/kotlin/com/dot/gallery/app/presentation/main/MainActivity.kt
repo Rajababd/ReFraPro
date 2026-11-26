@@ -111,7 +111,7 @@ import com.dot.gallery.core.activeDataStore
 import com.dot.gallery.domain.settings.toSnapshotMap
 import com.dot.gallery.core.logging.printWarning
 import com.dot.gallery.injection.injectViewModel
-import com.dot.gallery.app.presentation.profiles.ProfileLockGateOverlay
+import com.dot.gallery.app.presentation.profiles.ProfileLockGateContent
 
 
 class MainActivity : AppCompatActivity() {
@@ -404,32 +404,33 @@ class MainActivity : AppCompatActivity() {
                                                 }).toDp()
                                             }
                                             Box(Modifier.fillMaxSize()) {
-                                            NavigationComp(
-                                                navController = navController,
-                                                sharedTransitionScope = sharedTransitionScope,
-                                                // Inset panes already sit below the status bar, and a
-                                                // start-edge rail already keeps clear of the cutout. The
-                                                // far edge keeps only the navigation bar: a cutout band
-                                                // there would waste its full height for a small hole.
-                                                paddingValues = if (paneChrome || railEdge) {
-                                                    PaddingValues(
-                                                        start = if (railEdge) 0.dp
-                                                            else paddingValues.calculateStartPadding(layoutDirection),
-                                                        end = if (railEdge) navEnd
-                                                            else paddingValues.calculateEndPadding(layoutDirection),
-                                                        top = if (paneChrome) 0.dp else paddingValues.calculateTopPadding(),
-                                                        bottom = paddingValues.calculateBottomPadding(),
-                                                    )
-                                                } else paddingValues,
-                                                bottomBarState = bottomBarState,
-                                                systemBarFollowThemeState = systemBarFollowThemeState,
-                                                toggleRotate = ::toggleOrientation,
-                                                isScrolling = isScrolling,
-                                                storyCardsViewModel = storyCardsViewModel,
-                                                initialStartDestination = initialStartDestination
-                                            )
-                                                ProfileLockGateOverlay()
+                                            ProfileLockGateContent {
+                                                NavigationComp(
+                                                    navController = navController,
+                                                    sharedTransitionScope = sharedTransitionScope,
+                                                    // Inset panes already sit below the status bar, and a
+                                                    // start-edge rail already keeps clear of the cutout. The
+                                                    // far edge keeps only the navigation bar: a cutout band
+                                                    // there would waste its full height for a small hole.
+                                                    paddingValues = if (paneChrome || railEdge) {
+                                                        PaddingValues(
+                                                            start = if (railEdge) 0.dp
+                                                                else paddingValues.calculateStartPadding(layoutDirection),
+                                                            end = if (railEdge) navEnd
+                                                                else paddingValues.calculateEndPadding(layoutDirection),
+                                                            top = if (paneChrome) 0.dp else paddingValues.calculateTopPadding(),
+                                                            bottom = paddingValues.calculateBottomPadding(),
+                                                        )
+                                                    } else paddingValues,
+                                                    bottomBarState = bottomBarState,
+                                                    systemBarFollowThemeState = systemBarFollowThemeState,
+                                                    toggleRotate = ::toggleOrientation,
+                                                    isScrolling = isScrolling,
+                                                    storyCardsViewModel = storyCardsViewModel,
+                                                    initialStartDestination = initialStartDestination
+                                                )
                                                 CrashReportPrompt()
+                                            }
                                             }
                                         }
                                     }

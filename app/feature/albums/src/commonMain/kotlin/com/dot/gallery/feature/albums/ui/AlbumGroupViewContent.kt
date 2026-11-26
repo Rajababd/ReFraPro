@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.DriveFileRenameOutline
 import androidx.compose.material.icons.outlined.PhotoAlbum
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -61,6 +62,7 @@ import com.dot.gallery.feature.albums.generated.resources.group_members_header
 import com.dot.gallery.feature.albums.generated.resources.no_groups
 import com.dot.gallery.feature.albums.generated.resources.s_items
 import com.dot.gallery.feature.albums.ui.components.AlbumOptionSheet
+import com.dot.gallery.feature.albums.ui.components.LockedAlbumThumbnail
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.pluralStringResource
@@ -117,10 +119,11 @@ fun AlbumGroupViewContent(
                     stats = listOf(groupLabel, albumCount, itemCount).joinToString(" · "),
                     cover = {
                         val coverAlbum = groupAlbums.firstOrNull()
+                        val coverIsLocked = coverAlbum?.isLocked == true
                         GalleryDetailCover(
-                            model = coverAlbum?.uri?.toString(),
-                            signature = coverAlbum,
-                            fallbackIcon = Icons.Outlined.PhotoAlbum,
+                            model = coverAlbum?.takeUnless { coverIsLocked }?.uri?.toString(),
+                            signature = coverAlbum?.takeUnless { coverIsLocked },
+                            fallbackIcon = if (coverIsLocked) Icons.Outlined.Lock else Icons.Outlined.PhotoAlbum,
                         )
                     },
                     actions = if (group != null) {
@@ -250,15 +253,25 @@ private fun GroupMemberRow(
             onLongClick = { scope.launch { optionsSheetState.show() } },
         ),
         customIcon = { _, _, _ ->
-            LocalMediaImageRenderer.current.RenderImage(
-                modifier = thumbnailModifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(16.dp)),
-                model = album.uri.toString(),
-                contentScale = ContentScale.Crop,
-                contentDescription = null,
-                signature = album,
-            )
+            if (album.isLocked) {
+                LockedAlbumThumbnail(
+                    modifier = thumbnailModifier
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(16.dp)),
+                    iconModifier = Modifier.size(20.dp),
+                    shape = RoundedCornerShape(16.dp),
+                )
+            } else {
+                LocalMediaImageRenderer.current.RenderImage(
+                    modifier = thumbnailModifier
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(16.dp)),
+                    model = album.uri.toString(),
+                    contentScale = ContentScale.Crop,
+                    contentDescription = null,
+                    signature = album,
+                )
+            }
         },
         customTrailingContent = {
             Icon(

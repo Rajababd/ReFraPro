@@ -979,9 +979,7 @@ fun NavigationComp(
 
                 AlbumGroupViewScreen(
                     groupId = groupId,
-                    onAlbumClick = { album ->
-                        albumsViewModel.onAlbumClick(eventHandler::navigate)(album)
-                    },
+                    onAlbumClick = onAlbumClickWithLock,
                     onAlbumLongClick = albumsViewModel.onAlbumLongClick,
                     onMoveAlbumToTrash = albumsViewModel::moveAlbumToTrash,
                     onIgnoreAlbum = albumsViewModel::addAlbumToIgnored,
