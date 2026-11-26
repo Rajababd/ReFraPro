@@ -6,4 +6,13 @@
     <string name="profile_rename">تغيير الاسم</string>
     <string name="content_lock_set_password">تعيين كلمة مرور</string>
     <string name="content_lock_unlock">فتح القفل</string>
+    <string name="profile_lock">تعيين كلمة مرور للبروفايل</string>
+    <string name="profile_unlock">فتح قفل البروفايل</string>
+    <string name="profile_password">كلمة المرور</string>
+    <string name="profile_password_confirm">تأكيد كلمة المرور</string>
+    <string name="profile_password_mismatch">كلمتا المرور غير متطابقتين</string>
+    <string name="profile_password_invalid">كلمة المرور غير صحيحة</string>
+    <string name="profile_biometric">فتح القفل بالمصادقة الحيوية</string>
+    <string name="profile_remove_lock">إزالة قفل كلمة المرور</string>
+    <string name="profile_use_biometric">استخدام المصادقة الحيوية</string>
 </resources>

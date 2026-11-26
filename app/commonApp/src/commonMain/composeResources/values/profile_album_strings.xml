@@ -6,4 +6,13 @@
     <string name="profile_rename">Rename</string>
     <string name="content_lock_set_password">Set password</string>
     <string name="content_lock_unlock">Unlock</string>
+    <string name="profile_lock">Set profile password</string>
+    <string name="profile_unlock">Unlock profile</string>
+    <string name="profile_password">Password</string>
+    <string name="profile_password_confirm">Confirm password</string>
+    <string name="profile_password_mismatch">Passwords do not match</string>
+    <string name="profile_password_invalid">Incorrect password</string>
+    <string name="profile_biometric">Unlock with biometrics</string>
+    <string name="profile_remove_lock">Remove password lock</string>
+    <string name="profile_use_biometric">Use biometric authentication</string>
 </resources>
