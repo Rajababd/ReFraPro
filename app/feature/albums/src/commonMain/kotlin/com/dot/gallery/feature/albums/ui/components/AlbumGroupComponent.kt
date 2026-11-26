@@ -27,6 +27,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Collections
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -56,6 +58,8 @@ import com.dot.gallery.feature.albums.generated.resources.delete_group
 import com.dot.gallery.feature.albums.generated.resources.edit_group
 import com.dot.gallery.feature.albums.generated.resources.n_albums
 import com.dot.gallery.feature.albums.generated.resources.rename_group
+import com.dot.gallery.feature.albums.generated.resources.lock_group
+import com.dot.gallery.feature.albums.generated.resources.unlock_group
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -65,7 +69,9 @@ fun AlbumGroupComponent(
     onGroupClick: (AlbumGroupWithAlbums) -> Unit,
     onRenameGroup: ((AlbumGroupWithAlbums) -> Unit)? = null,
     onDeleteGroup: ((AlbumGroupWithAlbums) -> Unit)? = null,
-    onEditGroup: ((AlbumGroupWithAlbums) -> Unit)? = null
+    onEditGroup: ((AlbumGroupWithAlbums) -> Unit)? = null,
+    isLocked: Boolean = false,
+    onToggleLock: ((AlbumGroupWithAlbums) -> Unit)? = null
 ) {
     val scope = rememberCoroutineScope()
     val appBottomSheetState = rememberAppBottomSheetState()
@@ -77,14 +83,15 @@ fun AlbumGroupComponent(
     val renameTitle = stringResource(Res.string.rename_group)
     val deleteTitle = stringResource(Res.string.delete_group)
     val editTitle = stringResource(Res.string.edit_group)
+    val lockTitle = stringResource(if (isLocked) Res.string.unlock_group else Res.string.lock_group)
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
     val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
     val secondaryContainer = MaterialTheme.colorScheme.secondaryContainer
     val onSecondaryContainer = MaterialTheme.colorScheme.onSecondaryContainer
 
-    val optionList = remember(onRenameGroup, onDeleteGroup, onEditGroup) {
+    val optionList = remember(onRenameGroup, onDeleteGroup, onEditGroup, onToggleLock, isLocked) {
         mutableListOf<OptionItem>().apply {
-            if (onEditGroup != null) {
+            if (onEditGroup != null && !isLocked) {
                 add(
                     OptionItem(
                         icon = Icons.Outlined.Collections,
@@ -100,7 +107,7 @@ fun AlbumGroupComponent(
                     )
                 )
             }
-            if (onRenameGroup != null) {
+            if (onRenameGroup != null && !isLocked) {
                 add(
                     OptionItem(
                         icon = Icons.Outlined.Edit,
@@ -116,7 +123,23 @@ fun AlbumGroupComponent(
                     )
                 )
             }
-            if (onDeleteGroup != null) {
+            if (onToggleLock != null) {
+                add(
+                    OptionItem(
+                        icon = if (isLocked) Icons.Outlined.LockOpen else Icons.Outlined.Lock,
+                        text = lockTitle,
+                        containerColor = secondaryContainer,
+                        contentColor = onSecondaryContainer,
+                        onClick = {
+                            scope.launch {
+                                appBottomSheetState.hide()
+                                onToggleLock(groupWithAlbums)
+                            }
+                        }
+                    )
+                )
+            }
+            if (onDeleteGroup != null && !isLocked) {
                 add(
                     OptionItem(
                         icon = Icons.Outlined.Delete,
@@ -140,7 +163,9 @@ fun AlbumGroupComponent(
         optionList = arrayOf(optionList),
         headerContent = {
             val albums = groupWithAlbums.albums
-            if (albums.isNotEmpty()) {
+            if (isLocked) {
+                Icon(Icons.Outlined.Lock, contentDescription = null, modifier = Modifier.fillMaxWidth(0.5f).aspectRatio(1f).padding(24.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else if (albums.isNotEmpty()) {
                 val thumbRadius = 12.dp
                 val gap = 2.dp
                 Box(
@@ -240,7 +265,7 @@ fun AlbumGroupComponent(
                     indication = LocalIndication.current,
                     onClick = { onGroupClick(groupWithAlbums) },
                     onLongClick = {
-                        if (onRenameGroup != null || onDeleteGroup != null) {
+                        if (onRenameGroup != null || onDeleteGroup != null || onToggleLock != null) {
                             feedbackManager.vibrate()
                             scope.launch { appBottomSheetState.show() }
                         }
@@ -248,7 +273,9 @@ fun AlbumGroupComponent(
                 )
         ) {
             val albums = groupWithAlbums.albums
-            if (albums.isEmpty()) {
+            if (isLocked) {
+                Icon(Icons.Outlined.Lock, contentDescription = null, modifier = Modifier.align(Alignment.Center).fillMaxSize(0.4f), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else if (albums.isEmpty()) {
                 Icon(
                     imageVector = Icons.Outlined.Collections,
                     contentDescription = null,
@@ -356,7 +383,9 @@ fun AlbumGroupRowComponent(
     onGroupClick: (AlbumGroupWithAlbums) -> Unit,
     onRenameGroup: ((AlbumGroupWithAlbums) -> Unit)? = null,
     onDeleteGroup: ((AlbumGroupWithAlbums) -> Unit)? = null,
-    onEditGroup: ((AlbumGroupWithAlbums) -> Unit)? = null
+    onEditGroup: ((AlbumGroupWithAlbums) -> Unit)? = null,
+    isLocked: Boolean = false,
+    onToggleLock: ((AlbumGroupWithAlbums) -> Unit)? = null
 ) {
     val scope = rememberCoroutineScope()
     val appBottomSheetState = rememberAppBottomSheetState()
@@ -366,14 +395,15 @@ fun AlbumGroupRowComponent(
     val renameTitle = stringResource(Res.string.rename_group)
     val deleteTitle = stringResource(Res.string.delete_group)
     val editTitle = stringResource(Res.string.edit_group)
+    val lockTitle = stringResource(if (isLocked) Res.string.unlock_group else Res.string.lock_group)
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
     val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
     val secondaryContainer = MaterialTheme.colorScheme.secondaryContainer
     val onSecondaryContainer = MaterialTheme.colorScheme.onSecondaryContainer
 
-    val optionList = remember(onRenameGroup, onDeleteGroup, onEditGroup) {
+    val optionList = remember(onRenameGroup, onDeleteGroup, onEditGroup, onToggleLock, isLocked) {
         mutableListOf<OptionItem>().apply {
-            if (onEditGroup != null) {
+            if (onEditGroup != null && !isLocked) {
                 add(
                     OptionItem(
                         icon = Icons.Outlined.Collections,
@@ -389,7 +419,7 @@ fun AlbumGroupRowComponent(
                     )
                 )
             }
-            if (onRenameGroup != null) {
+            if (onRenameGroup != null && !isLocked) {
                 add(
                     OptionItem(
                         icon = Icons.Outlined.Edit,
@@ -405,7 +435,23 @@ fun AlbumGroupRowComponent(
                     )
                 )
             }
-            if (onDeleteGroup != null) {
+            if (onToggleLock != null) {
+                add(
+                    OptionItem(
+                        icon = if (isLocked) Icons.Outlined.LockOpen else Icons.Outlined.Lock,
+                        text = lockTitle,
+                        containerColor = secondaryContainer,
+                        contentColor = onSecondaryContainer,
+                        onClick = {
+                            scope.launch {
+                                appBottomSheetState.hide()
+                                onToggleLock(groupWithAlbums)
+                            }
+                        }
+                    )
+                )
+            }
+            if (onDeleteGroup != null && !isLocked) {
                 add(
                     OptionItem(
                         icon = Icons.Outlined.Delete,
@@ -452,7 +498,7 @@ fun AlbumGroupRowComponent(
                 indication = LocalIndication.current,
                 onClick = { onGroupClick(groupWithAlbums) },
                 onLongClick = {
-                    if (onRenameGroup != null || onDeleteGroup != null) {
+                    if (onRenameGroup != null || onDeleteGroup != null || onToggleLock != null) {
                         feedbackManager.vibrate()
                         scope.launch { appBottomSheetState.show() }
                     }
@@ -467,7 +513,9 @@ fun AlbumGroupRowComponent(
                 .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
-            if (albums.isEmpty()) {
+            if (isLocked) {
+                Icon(Icons.Outlined.Lock, contentDescription = null, modifier = Modifier.align(Alignment.Center).fillMaxSize(0.5f), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else if (albums.isEmpty()) {
                 Icon(
                     imageVector = Icons.Outlined.Collections,
                     contentDescription = null,
@@ -549,16 +597,24 @@ fun GroupThumbnailCell(
     cornerShape: RoundedCornerShape
 ) {
     if (album != null) {
-        val renderer = LocalMediaImageRenderer.current
-        renderer.RenderImage(
-            modifier = modifier
-                .fillMaxSize()
-                .clip(cornerShape),
-            model = album.uri,
-            contentDescription = album.label,
-            contentScale = ContentScale.Crop,
-            signature = album
-        )
+        if (album.isLocked) {
+            LockedAlbumThumbnail(
+                modifier = modifier.fillMaxSize(),
+                iconModifier = Modifier.fillMaxSize().padding(16.dp),
+                shape = cornerShape
+            )
+        } else {
+            val renderer = LocalMediaImageRenderer.current
+            renderer.RenderImage(
+                modifier = modifier
+                    .fillMaxSize()
+                    .clip(cornerShape),
+                model = album.uri,
+                contentDescription = album.label,
+                contentScale = ContentScale.Crop,
+                signature = album
+            )
+        }
     } else {
         Box(
             modifier = modifier

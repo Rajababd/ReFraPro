@@ -207,6 +207,8 @@ fun AlbumsContent(
     onRenameGroup: (AlbumGroupWithAlbums) -> Unit = {},
     onDeleteGroup: (AlbumGroupWithAlbums) -> Unit = {},
     onEditGroup: (AlbumGroupWithAlbums) -> Unit = {},
+    lockedGroupIds: Set<Long> = emptySet(),
+    onToggleGroupLock: ((AlbumGroupWithAlbums) -> Unit)? = null,
     onAddToGroup: ((Album) -> Unit)? = null,
     onToggleMergeSubfolders: ((Album) -> Unit)? = null,
     onMergeParentSubfolders: ((Album) -> Unit)? = null,
@@ -216,6 +218,8 @@ fun AlbumsContent(
     onCollectionDelete: (CollectionWithCount) -> Unit = {},
     onCollectionTogglePin: (CollectionWithCount) -> Unit = {},
     onCollectionEditAlbums: (CollectionWithCount) -> Unit = {},
+    lockedCollectionIds: Set<Long> = emptySet(),
+    onToggleCollectionLock: ((CollectionWithCount) -> Unit)? = null,
     onCreateCollection: () -> Unit = {},
     onMoveToSection: ((Album) -> Unit)? = null,
     onToggleSectionExpanded: (AlbumSectionWithAlbums, Boolean) -> Unit = { _, _ -> },
@@ -569,7 +573,9 @@ fun AlbumsContent(
                                     onGroupClick = onGroupClick,
                                     onRenameGroup = onRenameGroup,
                                     onDeleteGroup = onDeleteGroup,
-                                    onEditGroup = onEditGroup
+                                    onEditGroup = onEditGroup,
+                                    isLocked = group.group.id in lockedGroupIds,
+                                    onToggleLock = onToggleGroupLock
                                 )
                             }
                             // Album Sections (when enabled)
@@ -727,7 +733,9 @@ fun AlbumsContent(
                                     onDelete = onCollectionDelete,
                                     onTogglePin = onCollectionTogglePin,
                                     onEditAlbums = onCollectionEditAlbums,
-                                    collectionThumbnailModel = collectionThumbnailModel
+                                    collectionThumbnailModel = collectionThumbnailModel,
+                                    isLocked = collectionWithCount.collection.id in lockedCollectionIds,
+                                    onToggleLock = onToggleCollectionLock
                                 )
                             }
                             // Dedicated cloud section, grouped per provider with its logo.
@@ -930,7 +938,9 @@ fun AlbumsContent(
                                 onGroupClick = onGroupClick,
                                 onRenameGroup = onRenameGroup,
                                 onDeleteGroup = onDeleteGroup,
-                                onEditGroup = onEditGroup
+                                onEditGroup = onEditGroup,
+                                isLocked = group.group.id in lockedGroupIds,
+                                onToggleLock = onToggleGroupLock
                             )
                         }
 
@@ -1079,7 +1089,9 @@ fun AlbumsContent(
                                 onDelete = onCollectionDelete,
                                 onTogglePin = onCollectionTogglePin,
                                 onEditAlbums = onCollectionEditAlbums,
-                                collectionThumbnailModel = collectionThumbnailModel
+                                collectionThumbnailModel = collectionThumbnailModel,
+                                isLocked = collectionWithCount.collection.id in lockedCollectionIds,
+                                onToggleLock = onToggleCollectionLock
                             )
                         }
                         // Dedicated cloud section, grouped per provider with its logo.

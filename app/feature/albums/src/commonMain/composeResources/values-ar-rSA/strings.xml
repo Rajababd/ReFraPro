@@ -1,0 +1,6 @@
+<resources>
+    <string name="lock_group">قفل المجموعة</string>
+    <string name="unlock_group">فتح قفل المجموعة</string>
+    <string name="lock_collection">قفل المجموعة المحفوظة</string>
+    <string name="unlock_collection">فتح قفل المجموعة المحفوظة</string>
+</resources>

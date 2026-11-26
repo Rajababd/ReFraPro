@@ -28,6 +28,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Collections
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.LibraryAdd
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.Icon
@@ -60,6 +62,8 @@ import com.dot.gallery.feature.albums.generated.resources.pin_collection
 import com.dot.gallery.feature.albums.generated.resources.rename_collection
 import com.dot.gallery.feature.albums.generated.resources.select_albums_for_collection
 import com.dot.gallery.feature.albums.generated.resources.unpin_collection
+import com.dot.gallery.feature.albums.generated.resources.lock_collection
+import com.dot.gallery.feature.albums.generated.resources.unlock_collection
 
 /**
  * Maps a collection's `thumbnailMediaId` to an image-loadable model. On Android
@@ -79,6 +83,8 @@ fun CollectionComponent(
     onTogglePin: ((CollectionWithCount) -> Unit)? = null,
     onEditAlbums: ((CollectionWithCount) -> Unit)? = null,
     collectionThumbnailModel: CollectionThumbnailModel = { null },
+    isLocked: Boolean = false,
+    onToggleLock: ((CollectionWithCount) -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     val appBottomSheetState = rememberAppBottomSheetState()
@@ -87,6 +93,7 @@ fun CollectionComponent(
 
     val renameTitle = stringResource(Res.string.rename_collection)
     val deleteTitle = stringResource(Res.string.delete_collection)
+    val lockTitle = stringResource(if (isLocked) Res.string.unlock_collection else Res.string.lock_collection)
     val addAlbumsTitle = stringResource(Res.string.select_albums_for_collection)
     val pinTitle = stringResource(
         if (collection.isPinned) Res.string.unpin_collection else Res.string.pin_collection
@@ -98,14 +105,14 @@ fun CollectionComponent(
     val tertiaryContainer = MaterialTheme.colorScheme.tertiaryContainer
     val onTertiaryContainer = MaterialTheme.colorScheme.onTertiaryContainer
 
-    val optionList = remember(collection.isPinned, onRename, onDelete, onTogglePin, onEditAlbums) {
+    val optionList = remember(collection.isPinned, onRename, onDelete, onTogglePin, onEditAlbums, isLocked, onToggleLock) {
         mutableListOf(
             OptionItem(
                 icon = Icons.Outlined.LibraryAdd,
                 text = addAlbumsTitle,
                 containerColor = secondaryContainer,
                 contentColor = onSecondaryContainer,
-                enabled = onEditAlbums != null,
+                enabled = onEditAlbums != null && !isLocked,
                 onClick = {
                     scope.launch {
                         appBottomSheetState.hide()
@@ -118,7 +125,7 @@ fun CollectionComponent(
                 text = pinTitle,
                 containerColor = secondaryContainer,
                 contentColor = onSecondaryContainer,
-                enabled = onTogglePin != null,
+                enabled = onTogglePin != null && !isLocked,
                 onClick = {
                     scope.launch {
                         appBottomSheetState.hide()
@@ -131,7 +138,7 @@ fun CollectionComponent(
                 text = renameTitle,
                 containerColor = tertiaryContainer,
                 contentColor = onTertiaryContainer,
-                enabled = onRename != null,
+                enabled = onRename != null && !isLocked,
                 onClick = {
                     scope.launch {
                         appBottomSheetState.hide()
@@ -140,11 +147,24 @@ fun CollectionComponent(
                 }
             ),
             OptionItem(
+                icon = if (isLocked) Icons.Outlined.LockOpen else Icons.Outlined.Lock,
+                text = lockTitle,
+                containerColor = secondaryContainer,
+                contentColor = onSecondaryContainer,
+                enabled = onToggleLock != null,
+                onClick = {
+                    scope.launch {
+                        appBottomSheetState.hide()
+                        onToggleLock?.invoke(collectionWithCount)
+                    }
+                }
+            ),
+            OptionItem(
                 icon = Icons.Outlined.Delete,
                 text = deleteTitle,
                 containerColor = primaryContainer,
                 contentColor = onPrimaryContainer,
-                enabled = onDelete != null,
+                enabled = onDelete != null && !isLocked,
                 onClick = {
                     scope.launch {
                         appBottomSheetState.hide()
@@ -184,7 +204,25 @@ fun CollectionComponent(
                 collectionWithCount.thumbnailMediaId?.let(collectionThumbnailModel)
             }
 
-            if (thumbnailModel != null) {
+            if (isLocked) {
+                Icon(
+                    imageVector = Icons.Outlined.Lock,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(cornerRadius))
+                        .combinedClickable(
+                            interactionSource = interactionSource,
+                            indication = LocalIndication.current,
+                            onClick = { onItemClick(collectionWithCount) },
+                            onLongClick = {
+                                feedbackManager.vibrate()
+                                scope.launch { appBottomSheetState.show() }
+                            }
+                        )
+                        .padding(48.dp)
+                )
+            } else if (thumbnailModel != null) {
                 val renderer = LocalMediaImageRenderer.current
                 renderer.RenderImage(
                     modifier = Modifier
@@ -292,6 +330,8 @@ fun CollectionRowComponent(
     onTogglePin: ((CollectionWithCount) -> Unit)? = null,
     onEditAlbums: ((CollectionWithCount) -> Unit)? = null,
     collectionThumbnailModel: CollectionThumbnailModel = { null },
+    isLocked: Boolean = false,
+    onToggleLock: ((CollectionWithCount) -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     val appBottomSheetState = rememberAppBottomSheetState()
@@ -300,6 +340,7 @@ fun CollectionRowComponent(
 
     val renameTitle = stringResource(Res.string.rename_collection)
     val deleteTitle = stringResource(Res.string.delete_collection)
+    val lockTitle = stringResource(if (isLocked) Res.string.unlock_collection else Res.string.lock_collection)
     val addAlbumsTitle = stringResource(Res.string.select_albums_for_collection)
     val pinTitle = stringResource(
         if (collection.isPinned) Res.string.unpin_collection else Res.string.pin_collection
@@ -311,7 +352,7 @@ fun CollectionRowComponent(
     val tertiaryContainer = MaterialTheme.colorScheme.tertiaryContainer
     val onTertiaryContainer = MaterialTheme.colorScheme.onTertiaryContainer
 
-    val optionList = remember(collection.isPinned, onRename, onDelete, onTogglePin, onEditAlbums) {
+    val optionList = remember(collection.isPinned, onRename, onDelete, onTogglePin, onEditAlbums, isLocked, onToggleLock) {
         mutableListOf(
             OptionItem(
                 icon = Icons.Outlined.LibraryAdd,
@@ -331,7 +372,7 @@ fun CollectionRowComponent(
                 text = pinTitle,
                 containerColor = secondaryContainer,
                 contentColor = onSecondaryContainer,
-                enabled = onTogglePin != null,
+                enabled = onTogglePin != null && !isLocked,
                 onClick = {
                     scope.launch {
                         appBottomSheetState.hide()
@@ -344,7 +385,7 @@ fun CollectionRowComponent(
                 text = renameTitle,
                 containerColor = tertiaryContainer,
                 contentColor = onTertiaryContainer,
-                enabled = onRename != null,
+                enabled = onRename != null && !isLocked,
                 onClick = {
                     scope.launch {
                         appBottomSheetState.hide()
@@ -353,11 +394,24 @@ fun CollectionRowComponent(
                 }
             ),
             OptionItem(
+                icon = if (isLocked) Icons.Outlined.LockOpen else Icons.Outlined.Lock,
+                text = lockTitle,
+                containerColor = secondaryContainer,
+                contentColor = onSecondaryContainer,
+                enabled = onToggleLock != null,
+                onClick = {
+                    scope.launch {
+                        appBottomSheetState.hide()
+                        onToggleLock?.invoke(collectionWithCount)
+                    }
+                }
+            ),
+            OptionItem(
                 icon = Icons.Outlined.Delete,
                 text = deleteTitle,
                 containerColor = primaryContainer,
                 contentColor = onPrimaryContainer,
-                enabled = onDelete != null,
+                enabled = onDelete != null && !isLocked,
                 onClick = {
                     scope.launch {
                         appBottomSheetState.hide()
@@ -404,7 +458,14 @@ fun CollectionRowComponent(
         Box(
             modifier = Modifier.aspectRatio(1f)
         ) {
-            if (thumbnailModel != null) {
+            if (isLocked) {
+                Icon(
+                    imageVector = Icons.Outlined.Lock,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp)).padding(12.dp)
+                )
+            } else if (thumbnailModel != null) {
                 val renderer = LocalMediaImageRenderer.current
                 renderer.RenderImage(
                     modifier = Modifier

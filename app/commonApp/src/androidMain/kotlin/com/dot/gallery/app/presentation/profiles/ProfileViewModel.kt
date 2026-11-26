@@ -14,12 +14,17 @@ import com.dot.gallery.core.activeDataStore
 import com.dot.gallery.data.repository.MediaRepository
 import com.dot.gallery.domain.model.Album
 import com.dot.gallery.domain.model.Profile
+import com.dot.gallery.feature.vault.domain.model.VaultAuthType
+import com.dot.gallery.feature.vault.domain.model.VerifyResult
+import com.dot.gallery.feature.vault.utils.VaultPasswordManager
+import kotlin.uuid.Uuid
 import com.dot.gallery.domain.util.MediaOrder
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import me.tatarka.inject.annotations.Inject
@@ -32,7 +37,8 @@ class ProfileViewModel @Inject constructor(
     context: Context,
     private val repository: MediaRepository
 ) : ViewModel() {
-    private val dataStore = context.applicationContext.activeDataStore
+    private val dataStoreContext = context.applicationContext
+    private val dataStore = dataStoreContext.activeDataStore
 
     val profiles = repository.getProfiles().stateIn(
         viewModelScope,
@@ -47,9 +53,27 @@ class ProfileViewModel @Inject constructor(
         .map { it.data.orEmpty() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val activeProfileId = dataStore.data
+    val rawActiveProfileId = dataStore.data
+        .onStart {
+            val defaultId = dataStore.data.first()[DEFAULT_PROFILE_ID]
+            if (defaultId != null) {
+                dataStore.edit { it[ACTIVE_PROFILE_ID] = defaultId }
+            }
+        }
         .map { it[ACTIVE_PROFILE_ID] ?: Profile.ALL_PHOTOS_ID }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Profile.ALL_PHOTOS_ID)
+
+    val lockedProfileIds = dataStore.data
+        .map { prefs -> prefs[LOCKED_PROFILE_IDS].orEmpty().mapNotNull(String::toLongOrNull).toSet() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    private val biometricProfileIds = dataStore.data
+        .map { it[BIOMETRIC_PROFILE_IDS].orEmpty() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+
+    val activeProfileId = combine(rawActiveProfileId, lockedProfileIds, ProfileAccessSession.unlockedProfileIds) { activeId, locked, unlocked ->
+        if (activeId in locked && activeId !in unlocked) ProfileAccessSession.LOCKED_PROFILE_ID else activeId
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProfileAccessSession.LOCKED_PROFILE_ID)
 
     val defaultProfileId = dataStore.data
         .map { it[DEFAULT_PROFILE_ID] ?: Profile.ALL_PHOTOS_ID }
@@ -62,6 +86,8 @@ class ProfileViewModel @Inject constructor(
     fun selectProfile(profileId: Long) {
         viewModelScope.launch {
             if (profileId == Profile.ALL_PHOTOS_ID || repository.getProfileAsync(profileId) != null) {
+                val previousId = rawActiveProfileId.value
+                if (previousId != profileId) ProfileAccessSession.lock(previousId)
                 dataStore.edit { it[ACTIVE_PROFILE_ID] = profileId }
             }
         }
@@ -79,7 +105,9 @@ class ProfileViewModel @Inject constructor(
         val normalized = name.trim()
         if (normalized.isEmpty()) return
         viewModelScope.launch {
+            val previousId = rawActiveProfileId.value
             val id = repository.insertProfile(Profile(name = normalized))
+            if (previousId != id) ProfileAccessSession.lock(previousId)
             dataStore.edit { it[ACTIVE_PROFILE_ID] = id }
         }
     }
@@ -256,6 +284,62 @@ class ProfileViewModel @Inject constructor(
     fun removeAlbumFromProfile(profileId: Long, albumId: Long) =
         removeAlbumsFromProfiles(listOf(profileId), listOf(albumId))
 
+    fun isProfileLocked(profileId: Long): Boolean = profileId in lockedProfileIds.value
+
+    fun isProfileBiometricEnabled(profileId: Long): Boolean =
+        profileId.toString() in biometricProfileIds.value
+
+    suspend fun setProfilePassword(profileId: Long, password: String) {
+        if (profileId < 0L || password.length < 4) return
+        val wasActive = rawActiveProfileId.value == profileId
+        VaultPasswordManager.setPassword(
+            dataStoreContext,
+            profileCredentialUuid(profileId),
+            password,
+            VaultAuthType.PASSWORD
+        )
+        dataStore.edit { prefs ->
+            prefs[LOCKED_PROFILE_IDS] = prefs[LOCKED_PROFILE_IDS].orEmpty() + profileId.toString()
+        }
+        ProfileAccessSession.lock(profileId)
+        if (wasActive) {
+            // Keep the selected id persisted; the distributor masks it until authenticated.
+            dataStore.edit { it[ACTIVE_PROFILE_ID] = profileId }
+        }
+    }
+
+    suspend fun verifyProfilePassword(profileId: Long, password: String): VerifyResult =
+        VaultPasswordManager.verifyPassword(dataStoreContext, profileCredentialUuid(profileId), password)
+
+    fun unlockProfileSession(profileId: Long) {
+        ProfileAccessSession.unlock(profileId)
+    }
+
+    fun setProfileBiometricEnabled(profileId: Long, enabled: Boolean) {
+        viewModelScope.launch {
+            dataStore.edit { prefs ->
+                val ids = prefs[BIOMETRIC_PROFILE_IDS].orEmpty()
+                prefs[BIOMETRIC_PROFILE_IDS] = if (enabled) ids + profileId.toString() else ids - profileId.toString()
+            }
+        }
+    }
+
+    fun removeProfileLock(profileId: Long) {
+        viewModelScope.launch {
+            dataStore.edit { prefs ->
+                prefs[LOCKED_PROFILE_IDS] = prefs[LOCKED_PROFILE_IDS].orEmpty() - profileId.toString()
+                prefs[BIOMETRIC_PROFILE_IDS] = prefs[BIOMETRIC_PROFILE_IDS].orEmpty() - profileId.toString()
+            }
+            ProfileAccessSession.unlock(profileId)
+            VaultPasswordManager.clearVaultSecrets(dataStoreContext, profileCredentialUuid(profileId))
+        }
+    }
+
+    private fun profileCredentialUuid(profileId: Long): Uuid {
+        val suffix = profileId.toString(16).takeLast(12).padStart(12, '0')
+        return Uuid.parse("00000001-0000-0000-0000-$suffix")
+    }
+
     fun renameProfile(profileId: Long, name: String) {
         val normalized = name.trim()
         if (normalized.isEmpty() || profileId == Profile.ALL_PHOTOS_ID) return
@@ -277,12 +361,18 @@ class ProfileViewModel @Inject constructor(
                 if (prefs[DEFAULT_PROFILE_ID] == profileId) {
                     prefs[DEFAULT_PROFILE_ID] = Profile.ALL_PHOTOS_ID
                 }
+                prefs[LOCKED_PROFILE_IDS] = prefs[LOCKED_PROFILE_IDS].orEmpty() - profileId.toString()
+                prefs[BIOMETRIC_PROFILE_IDS] = prefs[BIOMETRIC_PROFILE_IDS].orEmpty() - profileId.toString()
             }
+            ProfileAccessSession.lock(profileId)
+            VaultPasswordManager.clearVaultSecrets(dataStoreContext, profileCredentialUuid(profileId))
         }
     }
 
     companion object {
         private val ACTIVE_PROFILE_ID = longPreferencesKey("active_profile_id")
+        private val LOCKED_PROFILE_IDS = stringSetPreferencesKey("locked_profile_ids")
+        private val BIOMETRIC_PROFILE_IDS = stringSetPreferencesKey("biometric_profile_ids")
         private val DEFAULT_PROFILE_ID = longPreferencesKey("default_profile_id")
         private val ALL_PHOTOS_EXCLUDED_MEDIA_IDS =
             stringSetPreferencesKey("all_photos_excluded_media_ids")

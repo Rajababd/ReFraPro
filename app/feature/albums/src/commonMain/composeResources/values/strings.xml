@@ -104,4 +104,8 @@
     <string name="album_selection_add_profile">Add to profile</string>
     <string name="album_selection_remove_profile">Remove from profile</string>
     <string name="album_selection_cancel">Cancel selection</string>
+    <string name="lock_group">Lock group</string>
+    <string name="unlock_group">Unlock group</string>
+    <string name="lock_collection">Lock collection</string>
+    <string name="unlock_collection">Unlock collection</string>
 </resources>

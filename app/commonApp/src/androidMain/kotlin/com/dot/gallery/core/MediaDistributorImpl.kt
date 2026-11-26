@@ -34,6 +34,7 @@ import com.dot.gallery.domain.model.LockedAlbum
 import com.dot.gallery.domain.model.MergedSubfolderAlbum
 import com.dot.gallery.domain.model.PinnedAlbum
 import com.dot.gallery.domain.model.Profile
+import com.dot.gallery.app.presentation.profiles.ProfileAccessSession
 import com.dot.gallery.domain.model.TimelineDateSource
 import com.dot.gallery.domain.model.TimelineSettings
 import com.dot.gallery.domain.model.UIEvent
@@ -232,17 +233,24 @@ class MediaDistributorImpl @Inject constructor(
                 context.activeDataStore.edit { it[longPreferencesKey("active_profile_id")] = defaultId }
             }
         }
-        .map { it[longPreferencesKey("active_profile_id")] ?: Profile.ALL_PHOTOS_ID }
+        .combine(ProfileAccessSession.unlockedProfileIds) { prefs, unlocked ->
+            val activeId = prefs[longPreferencesKey("active_profile_id")] ?: Profile.ALL_PHOTOS_ID
+            val locked = prefs[stringSetPreferencesKey("locked_profile_ids")]
+                .orEmpty().mapNotNull(String::toLongOrNull).toSet()
+            if (activeId in locked && activeId !in unlocked) ProfileAccessSession.LOCKED_PROFILE_ID else activeId
+        }
         .distinctUntilChanged()
-        .stateIn(appScope, SharingStarted.Eagerly, Profile.ALL_PHOTOS_ID)
+        .stateIn(appScope, SharingStarted.Eagerly, ProfileAccessSession.LOCKED_PROFILE_ID)
 
     private val profileMediaIdsFlow: Flow<Set<Long>?> = activeProfileIdFlow.flatMapLatest { profileId ->
         if (profileId == Profile.ALL_PHOTOS_ID) flowOf(null)
+        else if (profileId == ProfileAccessSession.LOCKED_PROFILE_ID) flowOf(emptySet<Long>())
         else repository.getProfileMediaIds(profileId).map { it.toSet() }
     }
 
     private val profileAlbumIdsFlow: Flow<Set<Long>?> = activeProfileIdFlow.flatMapLatest { profileId ->
         if (profileId == Profile.ALL_PHOTOS_ID) flowOf(null)
+        else if (profileId == ProfileAccessSession.LOCKED_PROFILE_ID) flowOf(emptySet())
         else repository.getAlbumIdsInProfile(profileId).map { it.toSet() }
     }
 
@@ -905,12 +913,37 @@ class MediaDistributorImpl @Inject constructor(
      * Collections
      */
     override val collectionsFlow: StateFlow<List<CollectionWithCount>> =
-        repository.getCollectionsWithCount()
-            .stateIn(
-                scope = appScope,
-                started = sharingMethod,
-                initialValue = emptyList()
-            )
+        combine(
+            repository.getCollectionsWithCount(),
+            _lockedAlbumsInternal
+        ) { collections, lockedAlbums ->
+            collections to lockedAlbums
+        }.map { (collections, lockedAlbums) ->
+            // Hide collection covers whenever their source album/media is locked.
+            // While the lock/media indexes are still loading, fail closed and show placeholders.
+            val media = repository.getCompleteMedia().first().data
+            if (lockedAlbums == null || media == null) {
+                collections.map { it.copy(thumbnailMediaId = null) }
+            } else {
+                val lockedAlbumIds = lockedAlbums.mapTo(HashSet()) { it.id }
+                val lockedMediaIds = media.asSequence()
+                    .filter { it.albumID in lockedAlbumIds }
+                    .mapTo(HashSet()) { it.id }
+                collections.map { item ->
+                    val memberAlbumIds = repository.getAlbumIdsInCollection(item.collection.id).first().toSet()
+                    val explicitMediaIds = repository.getMediaIdsInCollection(item.collection.id).first().toSet()
+                    val containsLockedContent =
+                        memberAlbumIds.any { it in lockedAlbumIds } ||
+                        explicitMediaIds.any { it in lockedMediaIds } ||
+                        item.thumbnailMediaId?.let { it in lockedMediaIds } == true
+                    if (containsLockedContent) item.copy(thumbnailMediaId = null) else item
+                }
+            }
+        }.stateIn(
+            scope = appScope,
+            started = sharingMethod,
+            initialValue = emptyList()
+        )
 
     override val collectionAlbumIdsFlow: StateFlow<Set<Long>> =
         repository.getAllAlbumIdsInCollections()
@@ -1469,9 +1502,9 @@ class MediaDistributorImpl @Inject constructor(
             val lockedAlbumIds = lockedAlbums.mapTo(HashSet()) { it.id }
             val data = (result.data ?: emptyList()).toMutableList().apply {
                 removeAll { media -> blacklistedAlbums.any { it.shouldIgnore(media, albumId) } }
-                if (isMainTimeline) {
-                    removeAll { media -> media.albumID in lockedAlbumIds }
-                }
+                // Locked-album media is hidden from every aggregate grid (timeline,
+                // favorites and trash); only the authenticated album timeline may reveal it.
+                removeAll { media -> media.albumID in lockedAlbumIds }
                 if (profileMediaIds != null && !isTrash) {
                     removeAll { media -> media.id !in profileMediaIds }
                 } else if (profileMediaIds == null && !isTrash && (allPhotosExcludedMediaIds.isNotEmpty() || allPhotosExcludedAlbumIds.isNotEmpty())) {
@@ -1775,7 +1808,8 @@ class MediaDistributorImpl @Inject constructor(
             dateFormatsFlow,
             albumMediaSortFlow,
             groupSimilarMedia,
-            enabledGroupTypes
+            enabledGroupTypes,
+            _lockedAlbumsInternal
         ) { values ->
             @Suppress("UNCHECKED_CAST")
             val mediaIds = values[0] as List<Long>
@@ -1791,6 +1825,11 @@ class MediaDistributorImpl @Inject constructor(
             val shouldGroupSimilar = values[7] as Boolean
             @Suppress("UNCHECKED_CAST")
             val groupTypes = values[8] as Set<MediaGroupType>
+            @Suppress("UNCHECKED_CAST")
+            val lockedAlbums = values[9] as List<LockedAlbum>?
+
+            if (lockedAlbums == null) return@combine MediaState()
+            val lockedAlbumIds = lockedAlbums.mapTo(HashSet()) { it.id }
 
             val (defaultDateFormat, extendedDateFormat, weeklyDateFormat) = dateFormats
             val allMedia = allMediaResult.data ?: emptyList()
@@ -1798,7 +1837,7 @@ class MediaDistributorImpl @Inject constructor(
             val memberAlbumIds = albumIds.toHashSet()
             val excludedMediaIds = excludedIds.toHashSet()
             val collectionMedia = allMedia.filter { media ->
-                isCollectionMember(
+                media.albumID !in lockedAlbumIds && isCollectionMember(
                     mediaId = media.id,
                     albumId = media.albumID,
                     explicitMediaIds = explicitMediaIds,

@@ -4,4 +4,6 @@
     <string name="profile_album_selector_count">%1$d items</string>
     <string name="profile_settings_title">Profile settings</string>
     <string name="profile_rename">Rename</string>
+    <string name="content_lock_set_password">Set password</string>
+    <string name="content_lock_unlock">Unlock</string>
 </resources>

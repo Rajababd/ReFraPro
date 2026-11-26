@@ -22,12 +22,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,11 +60,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.dot.gallery.core.AppConstants
+import com.dot.gallery.core.activeDataStore
 import com.dot.gallery.core.LocalMediaDistributor
 import com.dot.gallery.core.ui.util.AppBottomSheetState
 import com.dot.gallery.domain.model.Album
+import com.dot.gallery.domain.model.AlbumGroupWithAlbums
+import com.dot.gallery.domain.model.CollectionWithCount
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.map
 import com.dot.gallery.core.LocalEventHandler
 import com.dot.gallery.core.LocalMediaSelector
 import com.dot.gallery.core.Settings
@@ -150,6 +160,10 @@ import com.dot.gallery.app.presentation.privatefolder.PrivateFolderScreen
 import com.dot.gallery.app.presentation.privatefolder.PrivateFolderSecuritySetupScreen
 import com.dot.gallery.app.presentation.vault.VaultScreen
 import com.dot.gallery.feature.vault.utils.rememberBiometricState
+import com.dot.gallery.feature.vault.utils.VaultPasswordManager
+import com.dot.gallery.feature.vault.domain.model.VaultAuthType
+import com.dot.gallery.feature.vault.domain.model.VerifyResult
+import kotlin.uuid.Uuid
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.dot.gallery.domain.model.UriMedia
@@ -194,7 +208,33 @@ import com.dot.gallery.generated.resources.biometric_authentication
 import com.dot.gallery.generated.resources.lock_album
 import com.dot.gallery.generated.resources.lock_album_disclaimer
 import com.dot.gallery.generated.resources.unlock_album_biometric_subtitle
+import com.dot.gallery.generated.resources.profile_password_invalid
+import com.dot.gallery.generated.resources.profile_lock
+import com.dot.gallery.generated.resources.profile_unlock
+import com.dot.gallery.generated.resources.profile_password
+import com.dot.gallery.generated.resources.profile_password_confirm
+import com.dot.gallery.generated.resources.profile_password_mismatch
+import com.dot.gallery.generated.resources.profile_use_biometric
+import com.dot.gallery.generated.resources.content_lock_set_password
+import com.dot.gallery.generated.resources.content_lock_unlock
 
+
+private data class PendingContentLock(
+    val credentialId: Uuid,
+    val title: String,
+    val isSetting: Boolean,
+    val onAuthorized: () -> Unit,
+)
+
+private fun contentCredentialUuid(kind: String, id: Long): Uuid {
+    val prefix = when (kind) {
+        "album" -> "00000002"
+        "group" -> "00000003"
+        else -> "00000004"
+    }
+    val suffix = id.toString(16).takeLast(12).padStart(12, '0')
+    return Uuid.parse("$prefix-0000-0000-0000-$suffix")
+}
 
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalPermissionsApi::class)
 @Stable
@@ -389,8 +429,42 @@ fun NavigationComp(
                 var pendingAlbum by remember { mutableStateOf<Album?>(null) }
                 var biometricAction by remember { mutableStateOf<String?>(null) }
                 var pendingLockAlbum by remember { mutableStateOf<Album?>(null) }
+                var pendingContentLock by remember { mutableStateOf<PendingContentLock?>(null) }
+                var contentLockPassword by rememberSaveable { mutableStateOf("") }
+                var contentLockPasswordConfirm by rememberSaveable { mutableStateOf("") }
+                var contentLockError by rememberSaveable { mutableStateOf("") }
+                val lockedGroupIdsFlow = remember(context) {
+                    context.activeDataStore.data.map { prefs ->
+                        prefs[stringSetPreferencesKey("locked_group_ids")].orEmpty()
+                            .mapNotNull(String::toLongOrNull).toSet()
+                    }
+                }
+                val lockedCollectionIdsFlow = remember(context) {
+                    context.activeDataStore.data.map { prefs ->
+                        prefs[stringSetPreferencesKey("locked_collection_ids")].orEmpty()
+                            .mapNotNull(String::toLongOrNull).toSet()
+                    }
+                }
+                val lockedGroupIds by lockedGroupIdsFlow.collectAsStateWithLifecycle(emptySet())
+                val lockedCollectionIds by lockedCollectionIdsFlow.collectAsStateWithLifecycle(emptySet())
                 val securitySheetState = rememberAppBottomSheetState()
                 val lockDisclaimerSheetState = rememberAppBottomSheetState()
+                val contentLockInvalidText = stringResource(Res.string.profile_password_invalid)
+                val contentLockMismatchText = stringResource(Res.string.profile_password_mismatch)
+                val contentBiometricState = rememberBiometricState(
+                    title = stringResource(Res.string.biometric_authentication),
+                    subtitle = stringResource(Res.string.unlock_album_biometric_subtitle),
+                    onSuccess = {
+                        pendingContentLock?.let { prompt ->
+                            prompt.onAuthorized()
+                            pendingContentLock = null
+                            contentLockPassword = ""
+                            contentLockPasswordConfirm = ""
+                            contentLockError = ""
+                        }
+                    },
+                    onFailed = { contentLockError = contentLockInvalidText }
+                )
                 val biometricState = rememberBiometricState(
                     title = stringResource(Res.string.biometric_authentication),
                     subtitle = stringResource(Res.string.unlock_album_biometric_subtitle),
@@ -411,43 +485,242 @@ fun NavigationComp(
                         biometricAction = null
                     }
                 )
-                val onAlbumClickWithLock: (Album) -> Unit = remember(biometricState) {
-                    { album ->
-                        if (album.isLocked) {
-                            if (!biometricState.isSupported) {
-                                scope.launch { securitySheetState.show() }
-                            } else {
+                val onAlbumClickWithLock: (Album) -> Unit = { album ->
+                    if (album.isLocked) {
+                        scope.launch {
+                            val credentialId = contentCredentialUuid("album", album.id)
+                            if (VaultPasswordManager.hasCustomPassword(context, credentialId)) {
+                                pendingContentLock = PendingContentLock(
+                                    credentialId = credentialId,
+                                    title = album.label,
+                                    isSetting = false,
+                                    onAuthorized = { albumsViewModel.onAlbumClick(eventHandler::navigate)(album) }
+                                )
+                                contentLockPassword = ""
+                                contentLockError = ""
+                            } else if (biometricState.isSupported) {
                                 pendingAlbum = album
                                 biometricAction = "open"
                                 biometricState.authenticate()
+                            } else {
+                                securitySheetState.show()
                             }
-                        } else {
-                            albumsViewModel.onAlbumClick(eventHandler::navigate)(album)
                         }
+                    } else {
+                        albumsViewModel.onAlbumClick(eventHandler::navigate)(album)
                     }
                 }
-                val onLockAlbumWithCheck: (Album) -> Unit = remember(biometricState) {
-                    { album ->
-                        if (!biometricState.isSupported) {
-                            scope.launch { securitySheetState.show() }
-                        } else if (album.isLocked) {
-                            pendingAlbum = album
-                            biometricAction = "unlock"
-                            biometricState.authenticate()
-                        } else {
-                            pendingLockAlbum = album
-                            scope.launch { lockDisclaimerSheetState.show() }
+                val onLockAlbumWithCheck: (Album) -> Unit = { album ->
+                    if (album.isLocked) {
+                        scope.launch {
+                            val credentialId = contentCredentialUuid("album", album.id)
+                            if (VaultPasswordManager.hasCustomPassword(context, credentialId)) {
+                                pendingContentLock = PendingContentLock(
+                                    credentialId = credentialId,
+                                    title = album.label,
+                                    isSetting = false,
+                                    onAuthorized = { albumsViewModel.toggleAlbumLock(album) }
+                                )
+                                contentLockPassword = ""
+                                contentLockError = ""
+                            } else if (biometricState.isSupported) {
+                                pendingAlbum = album
+                                biometricAction = "unlock"
+                                biometricState.authenticate()
+                            } else {
+                                securitySheetState.show()
+                            }
                         }
+                    } else {
+                        pendingLockAlbum = album
+                        scope.launch { lockDisclaimerSheetState.show() }
+                    }
+                }
+                val toggleGroupLock: (AlbumGroupWithAlbums) -> Unit = { group ->
+                    val id = group.group.id
+                    val credentialId = contentCredentialUuid("group", id)
+                    if (id in lockedGroupIds) {
+                        pendingContentLock = PendingContentLock(credentialId, group.group.label, false) {
+                            scope.launch {
+                                context.activeDataStore.edit { prefs ->
+                                    prefs[stringSetPreferencesKey("locked_group_ids")] =
+                                        prefs[stringSetPreferencesKey("locked_group_ids")].orEmpty() - id.toString()
+                                }
+                                VaultPasswordManager.clearVaultSecrets(context, credentialId)
+                            }
+                        }
+                    } else {
+                        pendingContentLock = PendingContentLock(credentialId, group.group.label, true) {
+                            scope.launch {
+                                context.activeDataStore.edit { prefs ->
+                                    prefs[stringSetPreferencesKey("locked_group_ids")] =
+                                        prefs[stringSetPreferencesKey("locked_group_ids")].orEmpty() + id.toString()
+                                }
+                            }
+                        }
+                    }
+                    contentLockPassword = ""
+                    contentLockPasswordConfirm = ""
+                    contentLockError = ""
+                }
+                val onGroupClickWithLock: (AlbumGroupWithAlbums) -> Unit = { group ->
+                    if (group.group.id in lockedGroupIds) {
+                        val credentialId = contentCredentialUuid("group", group.group.id)
+                        pendingContentLock = PendingContentLock(credentialId, group.group.label, false) {
+                            albumsViewModel.onGroupClick(eventHandler::navigate)(group)
+                        }
+                        contentLockPassword = ""
+                        contentLockError = ""
+                    } else {
+                        albumsViewModel.onGroupClick(eventHandler::navigate)(group)
+                    }
+                }
+                val toggleCollectionLock: (CollectionWithCount) -> Unit = { item ->
+                    val id = item.collection.id
+                    val credentialId = contentCredentialUuid("collection", id)
+                    if (id in lockedCollectionIds) {
+                        pendingContentLock = PendingContentLock(credentialId, item.collection.label, false) {
+                            scope.launch {
+                                context.activeDataStore.edit { prefs ->
+                                    prefs[stringSetPreferencesKey("locked_collection_ids")] =
+                                        prefs[stringSetPreferencesKey("locked_collection_ids")].orEmpty() - id.toString()
+                                }
+                                VaultPasswordManager.clearVaultSecrets(context, credentialId)
+                            }
+                        }
+                    } else {
+                        pendingContentLock = PendingContentLock(credentialId, item.collection.label, true) {
+                            scope.launch {
+                                context.activeDataStore.edit { prefs ->
+                                    prefs[stringSetPreferencesKey("locked_collection_ids")] =
+                                        prefs[stringSetPreferencesKey("locked_collection_ids")].orEmpty() + id.toString()
+                                }
+                            }
+                        }
+                    }
+                    contentLockPassword = ""
+                    contentLockPasswordConfirm = ""
+                    contentLockError = ""
+                }
+                val onCollectionClickWithLock: (CollectionWithCount) -> Unit = { item ->
+                    if (item.collection.id in lockedCollectionIds) {
+                        val credentialId = contentCredentialUuid("collection", item.collection.id)
+                        pendingContentLock = PendingContentLock(credentialId, item.collection.label, false) {
+                            eventHandler.navigate(Screen.CollectionViewScreen.collectionId(item.collection.id))
+                        }
+                        contentLockPassword = ""
+                        contentLockError = ""
+                    } else {
+                        eventHandler.navigate(Screen.CollectionViewScreen.collectionId(item.collection.id))
                     }
                 }
                 SecurityInfoSheet(sheetState = securitySheetState)
                 LockDisclaimerSheet(
                     sheetState = lockDisclaimerSheetState,
                     onConfirm = {
-                        pendingLockAlbum?.let { albumsViewModel.toggleAlbumLock(it) }
+                        pendingLockAlbum?.let { album ->
+                            val credentialId = contentCredentialUuid("album", album.id)
+                            pendingContentLock = PendingContentLock(
+                                credentialId = credentialId,
+                                title = album.label,
+                                isSetting = true,
+                                onAuthorized = { albumsViewModel.toggleAlbumLock(album) }
+                            )
+                            contentLockPassword = ""
+                            contentLockPasswordConfirm = ""
+                            contentLockError = ""
+                        }
                         pendingLockAlbum = null
                     }
                 )
+                pendingContentLock?.let { prompt ->
+                    AlertDialog(
+                        onDismissRequest = {
+                            pendingContentLock = null
+                            contentLockPassword = ""
+                            contentLockPasswordConfirm = ""
+                            contentLockError = ""
+                        },
+                        title = { Text(if (prompt.isSetting) stringResource(Res.string.content_lock_set_password) else prompt.title) },
+                        text = {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedTextField(
+                                    value = contentLockPassword,
+                                    onValueChange = { contentLockPassword = it; contentLockError = "" },
+                                    label = { Text(stringResource(Res.string.profile_password)) },
+                                    singleLine = true,
+                                    visualTransformation = PasswordVisualTransformation()
+                                )
+                                if (prompt.isSetting) {
+                                    OutlinedTextField(
+                                        value = contentLockPasswordConfirm,
+                                        onValueChange = { contentLockPasswordConfirm = it; contentLockError = "" },
+                                        label = { Text(stringResource(Res.string.profile_password_confirm)) },
+                                        singleLine = true,
+                                        visualTransformation = PasswordVisualTransformation()
+                                    )
+                                }
+                                if (contentLockError.isNotBlank()) {
+                                    Text(contentLockError, color = MaterialTheme.colorScheme.error)
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(
+                                enabled = contentLockPassword.isNotEmpty() &&
+                                    (!prompt.isSetting || contentLockPasswordConfirm.isNotEmpty()),
+                                onClick = {
+                                    scope.launch {
+                                        if (prompt.isSetting) {
+                                            if (contentLockPassword != contentLockPasswordConfirm) {
+                                                contentLockError = contentLockMismatchText
+                                            } else if (contentLockPassword.length < 4) {
+                                                contentLockError = contentLockInvalidText
+                                            } else {
+                                                VaultPasswordManager.setPassword(
+                                                    context,
+                                                    prompt.credentialId,
+                                                    contentLockPassword,
+                                                    VaultAuthType.PASSWORD
+                                                )
+                                                prompt.onAuthorized()
+                                                pendingContentLock = null
+                                                contentLockPassword = ""
+                                                contentLockPasswordConfirm = ""
+                                            }
+                                        } else {
+                                            when (VaultPasswordManager.verifyPassword(context, prompt.credentialId, contentLockPassword)) {
+                                                VerifyResult.Success -> {
+                                                    prompt.onAuthorized()
+                                                    pendingContentLock = null
+                                                    contentLockPassword = ""
+                                                    contentLockError = ""
+                                                }
+                                                is VerifyResult.Failed, is VerifyResult.LockedOut ->
+                                                    contentLockError = contentLockInvalidText
+                                            }
+                                        }
+                                    }
+                                }
+                            ) { Text(stringResource(if (prompt.isSetting) Res.string.content_lock_set_password else Res.string.content_lock_unlock)) }
+                        },
+                        dismissButton = {
+                            Row {
+                                if (!prompt.isSetting && contentBiometricState.isSupported) {
+                                    TextButton(onClick = { contentBiometricState.authenticate() }) {
+                                        Text(stringResource(Res.string.profile_use_biometric))
+                                    }
+                                }
+                                TextButton(onClick = {
+                                    pendingContentLock = null
+                                    contentLockPassword = ""
+                                    contentLockPasswordConfirm = ""
+                                    contentLockError = ""
+                                }) { Text(stringResource(Res.string.action_cancel)) }
+                            }
+                        }
+                    )
+                }
                 // Album group sheet state
                 val groupSheetState = rememberAppBottomSheetState()
                 var groupDialogMode by remember { mutableStateOf("create") }
@@ -564,7 +837,9 @@ fun NavigationComp(
                     onMoveAlbumToTrash = albumsViewModel::moveAlbumToTrash,
                     onIgnoreAlbum = albumsViewModel::addAlbumToIgnored,
                     onLockAlbum = onLockAlbumWithCheck,
-                    onGroupClick = albumsViewModel.onGroupClick(eventHandler::navigate),
+                    onGroupClick = onGroupClickWithLock,
+                    lockedGroupIds = lockedGroupIds,
+                    onToggleGroupLock = toggleGroupLock,
                     onRenameGroup = { group ->
                         groupDialogMode = "rename"
                         groupDialogGroupId = group.group.id
@@ -587,11 +862,9 @@ fun NavigationComp(
                     onToggleMergeSubfolders = albumsViewModel::toggleMergeSubfolders,
                     onMergeParentSubfolders = albumsViewModel::mergeParentSubfolders,
                     onToggleMergedSubfolderDisplayMode = albumsViewModel::toggleMergedSubfolderDisplayMode,
-                    onCollectionClick = { cwc ->
-                        eventHandler.navigate(
-                            Screen.CollectionViewScreen.collectionId(cwc.collection.id)
-                        )
-                    },
+                    onCollectionClick = onCollectionClickWithLock,
+                    lockedCollectionIds = lockedCollectionIds,
+                    onToggleCollectionLock = toggleCollectionLock,
                     onCollectionRename = { cwc ->
                         collectionDialogMode = "rename"
                         collectionDialogId = cwc.collection.id

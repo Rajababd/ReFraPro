@@ -20,6 +20,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -110,6 +111,7 @@ import com.dot.gallery.core.activeDataStore
 import com.dot.gallery.domain.settings.toSnapshotMap
 import com.dot.gallery.core.logging.printWarning
 import com.dot.gallery.injection.injectViewModel
+import com.dot.gallery.app.presentation.profiles.ProfileLockGateOverlay
 
 
 class MainActivity : AppCompatActivity() {
@@ -401,6 +403,7 @@ class MainActivity : AppCompatActivity() {
                                                     WindowInsets.navigationBars.getLeft(this, layoutDirection)
                                                 }).toDp()
                                             }
+                                            Box(Modifier.fillMaxSize()) {
                                             NavigationComp(
                                                 navController = navController,
                                                 sharedTransitionScope = sharedTransitionScope,
@@ -425,7 +428,9 @@ class MainActivity : AppCompatActivity() {
                                                 storyCardsViewModel = storyCardsViewModel,
                                                 initialStartDestination = initialStartDestination
                                             )
-                                            CrashReportPrompt()
+                                                ProfileLockGateOverlay()
+                                                CrashReportPrompt()
+                                            }
                                         }
                                     }
                                 )

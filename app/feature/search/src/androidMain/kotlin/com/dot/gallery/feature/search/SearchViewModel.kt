@@ -274,7 +274,7 @@ class SearchViewModel @Inject constructor(
             query = query,
             categories = categories,
             locations = locations,
-            albums = albumState.albums,
+            albums = albumState.albums.filterNot { it.isLocked },
         )
     }.flowOn(Dispatchers.Default)
         .stateIn(
