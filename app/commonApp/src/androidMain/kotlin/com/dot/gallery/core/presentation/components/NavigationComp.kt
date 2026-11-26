@@ -831,7 +831,7 @@ fun NavigationComp(
                     onContentDrawn = onLibraryContentDrawn,
                     minCellWidth = albumsMinCellWidth,
                     isScrolling = isScrolling,
-                    onAlbumClick = onAlbumClickWithLock,
+                    onAlbumClick = onGroupAlbumClick,
                     onAlbumLongClick = albumsViewModel.onAlbumLongClick,
                     filterOptions = albumsViewModel.rememberFilters(),
                     onMoveAlbumToTrash = albumsViewModel::moveAlbumToTrash,
@@ -964,6 +964,119 @@ fun NavigationComp(
                 }
                 val albumsViewModel = injectViewModel<AlbumsViewModel> {albumsViewModel}
                 val groupViewScope = rememberCoroutineScope()
+                val groupAlbumSecuritySheetState = rememberAppBottomSheetState()
+                val groupAlbumContext = LocalContext.current
+                var pendingGroupAlbum by remember { mutableStateOf<Album?>(null) }
+                var groupAlbumPassword by rememberSaveable { mutableStateOf("") }
+                var groupAlbumPasswordError by rememberSaveable { mutableStateOf("") }
+                var showGroupAlbumPasswordDialog by remember { mutableStateOf(false) }
+                val groupAlbumPasswordInvalid = stringResource(Res.string.profile_password_invalid)
+                val groupAlbumBiometricState = rememberBiometricState(
+                    title = stringResource(Res.string.biometric_authentication),
+                    subtitle = stringResource(Res.string.unlock_album_biometric_subtitle),
+                    onSuccess = {
+                        pendingGroupAlbum?.let { album ->
+                            albumsViewModel.onAlbumClick(eventHandler::navigate)(album)
+                        }
+                        pendingGroupAlbum = null
+                        showGroupAlbumPasswordDialog = false
+                    },
+                    onFailed = {
+                        pendingGroupAlbum = null
+                        showGroupAlbumPasswordDialog = false
+                    }
+                )
+                val onGroupAlbumClick: (Album) -> Unit = { album ->
+                    if (album.isLocked) {
+                        pendingGroupAlbum = album
+                        groupAlbumPassword = ""
+                        groupAlbumPasswordError = ""
+                        groupViewScope.launch {
+                            val credentialId = contentCredentialUuid("album", album.id)
+                            if (VaultPasswordManager.hasCustomPassword(groupAlbumContext, credentialId)) {
+                                showGroupAlbumPasswordDialog = true
+                            } else if (groupAlbumBiometricState.isSupported) {
+                                groupAlbumBiometricState.authenticate()
+                            } else {
+                                pendingGroupAlbum = null
+                                groupAlbumSecuritySheetState.show()
+                            }
+                        }
+                    } else {
+                        albumsViewModel.onAlbumClick(eventHandler::navigate)(album)
+                    }
+                }
+                SecurityInfoSheet(sheetState = groupAlbumSecuritySheetState)
+                if (showGroupAlbumPasswordDialog) {
+                    pendingGroupAlbum?.let { album ->
+                        AlertDialog(
+                            onDismissRequest = {
+                                pendingGroupAlbum = null
+                                showGroupAlbumPasswordDialog = false
+                                groupAlbumPassword = ""
+                                groupAlbumPasswordError = ""
+                            },
+                            title = { Text(album.label) },
+                            text = {
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedTextField(
+                                        value = groupAlbumPassword,
+                                        onValueChange = {
+                                            groupAlbumPassword = it
+                                            groupAlbumPasswordError = ""
+                                        },
+                                        label = { Text(stringResource(Res.string.profile_password)) },
+                                        singleLine = true,
+                                        visualTransformation = PasswordVisualTransformation()
+                                    )
+                                    if (groupAlbumPasswordError.isNotBlank()) {
+                                        Text(groupAlbumPasswordError, color = MaterialTheme.colorScheme.error)
+                                    }
+                                }
+                            },
+                            confirmButton = {
+                                TextButton(
+                                    enabled = groupAlbumPassword.isNotEmpty(),
+                                    onClick = {
+                                        groupViewScope.launch {
+                                            val credentialId = contentCredentialUuid("album", album.id)
+                                            when (VaultPasswordManager.verifyPassword(
+                                                groupAlbumContext,
+                                                credentialId,
+                                                groupAlbumPassword
+                                            )) {
+                                                VerifyResult.Success -> {
+                                                    albumsViewModel.onAlbumClick(eventHandler::navigate)(album)
+                                                    pendingGroupAlbum = null
+                                                    showGroupAlbumPasswordDialog = false
+                                                    groupAlbumPassword = ""
+                                                    groupAlbumPasswordError = ""
+                                                }
+                                                is VerifyResult.Failed, is VerifyResult.LockedOut ->
+                                                    groupAlbumPasswordError = groupAlbumPasswordInvalid
+                                            }
+                                        }
+                                    }
+                                ) { Text(stringResource(Res.string.content_lock_unlock)) }
+                            },
+                            dismissButton = {
+                                Row {
+                                    if (groupAlbumBiometricState.isSupported) {
+                                        TextButton(onClick = { groupAlbumBiometricState.authenticate() }) {
+                                            Text(stringResource(Res.string.profile_use_biometric))
+                                        }
+                                    }
+                                    TextButton(onClick = {
+                                        pendingGroupAlbum = null
+                                        showGroupAlbumPasswordDialog = false
+                                        groupAlbumPassword = ""
+                                        groupAlbumPasswordError = ""
+                                    }) { Text(stringResource(Res.string.action_cancel)) }
+                                }
+                            }
+                        )
+                    }
+                }
                 val groupViewRenameSheetState = rememberAppBottomSheetState()
                 var groupViewRenameGroupId by remember { mutableStateOf<Long?>(null) }
                 var groupViewRenameInitialName by remember { mutableStateOf("") }
