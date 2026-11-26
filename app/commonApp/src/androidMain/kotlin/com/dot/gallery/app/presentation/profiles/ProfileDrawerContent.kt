@@ -160,7 +160,7 @@ fun ProfileDrawerContent(onProfileSelected: () -> Unit) {
             initiallySelectedAlbumIds = selectedAlbumIds,
             onDismiss = { albumTargetProfile = null },
             onSave = { albumIds ->
-                viewModel.replaceAlbumsInProfile(target.id, albumIds)
+                viewModel.replaceAlbumsInProfileWithinSource(target.id, activeAlbums.map { it.id }, albumIds)
                 albumTargetProfile = null
             },
         )
