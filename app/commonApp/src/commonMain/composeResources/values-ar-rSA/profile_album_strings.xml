@@ -2,4 +2,6 @@
     <string name="profile_album_selector_title">إضافة ألبومات إلى البروفايل</string>
     <string name="profile_album_selector_save">حفظ الاختيار</string>
     <string name="profile_album_selector_count">%1$d عنصر</string>
+    <string name="profile_settings_title">إعدادات البروفايل</string>
+    <string name="profile_rename">تغيير الاسم</string>
 </resources>
