@@ -108,6 +108,7 @@ fun AlbumsScreen(
     minCellWidth: Dp? = null,
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedContentScope,
+    onMultiSelectModeChange: (Boolean) -> Unit = {},
 ) {
     val trashResult = rememberActivityResult()
     val startupGate = LocalStartupWorkGate.current
@@ -221,6 +222,7 @@ fun AlbumsScreen(
             profileTargetAction = ProfileTargetAction.REMOVE
             showProfileTargetSheet = true
         },
+        onMultiSelectModeChange = onMultiSelectModeChange,
         onAddAlbumsToCollection = { ids ->
             pendingAlbumIds = ids
             showAddToCollectionSheet = true

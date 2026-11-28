@@ -221,7 +221,9 @@ class ProfileViewModel @Inject constructor(
         if (ids.isEmpty()) return emptySet()
         val result = mutableSetOf<Long>()
         val excluded = dataStore.data.first()[ALL_PHOTOS_EXCLUDED_ALBUM_IDS].orEmpty()
-        val allPhotosIds = deviceAlbums.value.asSequence().map { it.id }
+        val allDeviceAlbums = repository.getAlbums(MediaOrder.Default)
+            .first { !it.isLoading }.data.orEmpty()
+        val allPhotosIds = allDeviceAlbums.asSequence().map { it.id }
             .filterNot { it.toString() in excluded }
             .toSet()
         if (ids.any { it in allPhotosIds }) result += Profile.ALL_PHOTOS_ID
@@ -238,7 +240,9 @@ class ProfileViewModel @Inject constructor(
         if (ids.isEmpty()) return emptySet()
         val result = mutableSetOf<Long>()
         val excluded = dataStore.data.first()[ALL_PHOTOS_EXCLUDED_ALBUM_IDS].orEmpty()
-        val allPhotosIds = deviceAlbums.value.asSequence().map { it.id }
+        val allDeviceAlbums = repository.getAlbums(MediaOrder.Default)
+            .first { !it.isLoading }.data.orEmpty()
+        val allPhotosIds = allDeviceAlbums.asSequence().map { it.id }
             .filterNot { it.toString() in excluded }
             .toSet()
         if (allPhotosIds.containsAll(ids)) result += Profile.ALL_PHOTOS_ID

@@ -53,12 +53,14 @@ fun ProfileTargetSheet(
     var selectedIds by remember(visible, action, initiallySelectedProfileIds) {
         mutableStateOf(if (action == ProfileTargetAction.REMOVE) initiallySelectedProfileIds else emptySet())
     }
-    val showAllPhotos = (Profile.ALL_PHOTOS_ID in initiallySelectedProfileIds) ==
-        (action == ProfileTargetAction.REMOVE)
-    val targetProfiles = profiles.filter { profile ->
+    val allPhotosName = stringResource(Res.string.profile_all_photos)
+    val allPhotosProfile = remember(allPhotosName) {
+        Profile(id = Profile.ALL_PHOTOS_ID, name = allPhotosName)
+    }
+    val allProfiles = remember(profiles, allPhotosProfile) { listOf(allPhotosProfile) + profiles }
+    val targetProfiles = allProfiles.filter { profile ->
         (profile.id in initiallySelectedProfileIds) == (action == ProfileTargetAction.REMOVE)
     }
-    val allPhotosId = Profile.ALL_PHOTOS_ID
     val title = stringResource(
         if (action == ProfileTargetAction.ADD) Res.string.profile_add_media
         else Res.string.profile_remove_media
@@ -77,14 +79,6 @@ fun ProfileTargetSheet(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
-            )
-            if (showAllPhotos) ProfileTargetRow(
-                name = stringResource(Res.string.profile_all_photos),
-                selected = allPhotosId in selectedIds,
-                onToggle = {
-                    selectedIds = if (allPhotosId in selectedIds) selectedIds - allPhotosId
-                    else selectedIds + allPhotosId
-                }
             )
             targetProfiles.forEach { profile ->
                 ProfileTargetRow(

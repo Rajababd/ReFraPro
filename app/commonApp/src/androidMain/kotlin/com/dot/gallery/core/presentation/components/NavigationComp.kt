@@ -380,6 +380,7 @@ fun NavigationComp(
     }
     var lastStartScreen by rememberLastScreen()
     var libraryEditMode by rememberSaveable { mutableStateOf(false) }
+    var albumsMultiSelectMode by rememberSaveable { mutableStateOf(false) }
     val forcedLastScreen by rememberForcedLastScreen()
     // Read synchronously once so the wizard isn't briefly shown before the real start screen.
     val startDest = rememberStartupDestination(initialStartDestination)
@@ -398,9 +399,10 @@ fun NavigationComp(
     }
     val allowBlur by rememberAllowBlur()
 
-    LaunchedEffect(navBackStackEntry, isSelectionActive, libraryEditMode) {
+    LaunchedEffect(navBackStackEntry, isSelectionActive, libraryEditMode, albumsMultiSelectMode) {
         navBackStackEntry?.destination?.route?.let { route ->
-            bottomBarState.value = bottomNavEntries.any { it.route == route } && !isSelectionActive && !libraryEditMode
+            bottomBarState.value = bottomNavEntries.any { it.route == route } &&
+                !isSelectionActive && !libraryEditMode && !albumsMultiSelectMode
             if (route != Screen.VaultScreen()) {
                 shouldSkipAuth.value = false
             }
@@ -940,6 +942,7 @@ fun NavigationComp(
                     onEditModeChange = { libraryEditMode = it },
                 ) { albumsPadding, libraryHeader, libraryMenuItems, onLibraryContentDrawn, albumsMinCellWidth ->
                 AlbumsScreen(
+                    onMultiSelectModeChange = { albumsMultiSelectMode = it },
                     paddingValues = albumsPadding,
                     header = libraryHeader,
                     menuItems = libraryMenuItems,

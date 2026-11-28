@@ -51,6 +51,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
@@ -201,6 +202,7 @@ fun AlbumsContent(
     onRemoveAlbumFromProfile: (Album) -> Unit = {},
     onAddAlbumsToProfiles: (List<Long>) -> Unit = {},
     onRemoveAlbumsFromProfiles: (List<Long>) -> Unit = {},
+    onMultiSelectModeChange: (Boolean) -> Unit = {},
     onAddAlbumsToCollection: ((List<Long>) -> Unit)? = null,
     onLockAlbum: (Album) -> Unit,
     onGroupClick: (AlbumGroupWithAlbums) -> Unit = {},
@@ -282,6 +284,12 @@ fun AlbumsContent(
     val clearAlbumSelection: () -> Unit = {
         selectedAlbumIds = emptySet()
         multiSelectAlbums = false
+    }
+    LaunchedEffect(multiSelectAlbums) {
+        onMultiSelectModeChange(multiSelectAlbums)
+    }
+    DisposableEffect(Unit) {
+        onDispose { onMultiSelectModeChange(false) }
     }
     startupReadyEffect(!albumsState.value.isLoading)
 
