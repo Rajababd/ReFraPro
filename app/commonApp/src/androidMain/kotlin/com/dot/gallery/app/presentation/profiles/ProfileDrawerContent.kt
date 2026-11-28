@@ -5,7 +5,7 @@
 package com.dot.gallery.app.presentation.profiles
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -37,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -143,19 +144,8 @@ fun ProfileDrawerContent(onProfileSelected: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 NavigationDrawerItem(
-                    modifier = Modifier.weight(1f).combinedClickable(
-                        onClick = {
-                            if (Profile.ALL_PHOTOS_ID in lockedProfileIds) {
-                                openSettingsAfterUnlock = false
-                                unlockTarget = allPhotosProfile
-                                unlockPassword = ""
-                                passwordError = ""
-                            } else {
-                                viewModel.selectProfile(Profile.ALL_PHOTOS_ID)
-                                onProfileSelected()
-                            }
-                        },
-                        onLongClick = {
+                    modifier = Modifier.weight(1f).pointerInput(Profile.ALL_PHOTOS_ID) {
+                        detectTapGestures(onLongPress = {
                             if (Profile.ALL_PHOTOS_ID in lockedProfileIds) {
                                 openSettingsAfterUnlock = true
                                 unlockTarget = allPhotosProfile
@@ -165,11 +155,21 @@ fun ProfileDrawerContent(onProfileSelected: () -> Unit) {
                                 profileSettingsTarget = allPhotosProfile
                                 editedProfileName = allPhotosName
                             }
-                        }
-                    ),
+                        })
+                    },
                     label = { Text(allPhotosName) },
                     selected = activeProfileId == Profile.ALL_PHOTOS_ID,
-                    onClick = {},
+                    onClick = {
+                        if (Profile.ALL_PHOTOS_ID in lockedProfileIds) {
+                            openSettingsAfterUnlock = false
+                            unlockTarget = allPhotosProfile
+                            unlockPassword = ""
+                            passwordError = ""
+                        } else {
+                            viewModel.selectProfile(Profile.ALL_PHOTOS_ID)
+                            onProfileSelected()
+                        }
+                    },
                     icon = { Icon(if (Profile.ALL_PHOTOS_ID in lockedProfileIds) Icons.Outlined.Lock else Icons.Outlined.Photo, contentDescription = null) }
                 )
                 IconButton(onClick = { albumTargetProfile = allPhotosProfile }) {
@@ -186,19 +186,8 @@ fun ProfileDrawerContent(onProfileSelected: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     NavigationDrawerItem(
-                        modifier = Modifier.weight(1f).combinedClickable(
-                            onClick = {
-                                if (profile.id in lockedProfileIds) {
-                                    openSettingsAfterUnlock = false
-                                    unlockTarget = profile
-                                    unlockPassword = ""
-                                    passwordError = ""
-                                } else {
-                                    viewModel.selectProfile(profile.id)
-                                    onProfileSelected()
-                                }
-                            },
-                            onLongClick = {
+                        modifier = Modifier.weight(1f).pointerInput(profile.id) {
+                            detectTapGestures(onLongPress = {
                                 if (profile.id in lockedProfileIds) {
                                     openSettingsAfterUnlock = true
                                     unlockTarget = profile
@@ -208,11 +197,21 @@ fun ProfileDrawerContent(onProfileSelected: () -> Unit) {
                                     profileSettingsTarget = profile
                                     editedProfileName = profile.name
                                 }
-                            }
-                        ),
+                            })
+                        },
                         label = { Text(profile.name) },
                         selected = activeProfileId == profile.id,
-                        onClick = {},
+                        onClick = {
+                            if (profile.id in lockedProfileIds) {
+                                openSettingsAfterUnlock = false
+                                unlockTarget = profile
+                                unlockPassword = ""
+                                passwordError = ""
+                            } else {
+                                viewModel.selectProfile(profile.id)
+                                onProfileSelected()
+                            }
+                        },
                         icon = { Icon(if (profile.id in lockedProfileIds) Icons.Outlined.Lock else Icons.Outlined.Photo, contentDescription = null) }
                     )
                     IconButton(onClick = { albumTargetProfile = profile }) {

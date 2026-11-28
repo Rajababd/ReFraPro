@@ -440,7 +440,11 @@ fun AlbumsContent(
             .padding(horizontalInsets)
             .consumeWindowInsets(horizontalInsets),
         containerColor = pageColor,
-        topBar = { topBar(if (canArrange && !arranging) ({ arranging = true }) else null) }
+        topBar = {
+            if (!multiSelectAlbums) {
+                topBar(if (canArrange && !arranging) ({ arranging = true }) else null)
+            }
+        }
     ) { innerPaddingValues ->
         // hazeSource stays attached in every content state so the search bar keeps its
         // frosted effect when the grid is empty/loading/error (#areas.isEmpty = no draw).
@@ -506,7 +510,7 @@ fun AlbumsContent(
                                 start = PageSidePadding,
                                 end = PageSidePadding,
                                 top = innerPaddingValues.calculateTopPadding(),
-                                bottom = bottomBarInset + 16.dp + 64.dp
+                                bottom = bottomBarInset + 16.dp + if (multiSelectAlbums) 224.dp else 64.dp
                             ),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -523,14 +527,16 @@ fun AlbumsContent(
                                 span = { GridItemSpan(maxLineSpan) },
                                 key = KEY_ALBUMS_HEADING
                             ) {
-                                AlbumsHeading(
-                                    modifier = Modifier.pinchItem(key = KEY_ALBUMS_HEADING),
-                                    albumCount = albumsState.value.albums.size,
-                                    filterOptions = filterOptions,
-                                    viewType = viewType,
-                                    onViewTypeChange = { viewType = it },
-                                    onCreateCollection = onCreateCollection,
-                                )
+                                if (!multiSelectAlbums) {
+                                    AlbumsHeading(
+                                        modifier = Modifier.pinchItem(key = KEY_ALBUMS_HEADING),
+                                        albumCount = albumsState.value.albums.size,
+                                        filterOptions = filterOptions,
+                                        viewType = viewType,
+                                        onViewTypeChange = { viewType = it },
+                                        onCreateCollection = onCreateCollection,
+                                    )
+                                }
                             }
                             if (visiblePinned.isNotEmpty()) item(
                                 span = { GridItemSpan(maxLineSpan) },
@@ -553,7 +559,7 @@ fun AlbumsContent(
                                     )
                                 }
                             }
-                            if (filterChips != null) {
+                            if (filterChips != null && !multiSelectAlbums) {
                                 item(
                                     span = { GridItemSpan(maxLineSpan) },
                                     key = KEY_FILTER_BAR
@@ -896,13 +902,15 @@ fun AlbumsContent(
                             item(KEY_LIBRARY_HEADER) { header() }
                         }
                         item(KEY_ALBUMS_HEADING) {
-                            AlbumsHeading(
-                                albumCount = albumsState.value.albums.size,
-                                filterOptions = filterOptions,
-                                viewType = viewType,
-                                onViewTypeChange = { viewType = it },
-                                onCreateCollection = onCreateCollection,
-                            )
+                            if (!multiSelectAlbums) {
+                                AlbumsHeading(
+                                    albumCount = albumsState.value.albums.size,
+                                    filterOptions = filterOptions,
+                                    viewType = viewType,
+                                    onViewTypeChange = { viewType = it },
+                                    onCreateCollection = onCreateCollection,
+                                )
+                            }
                         }
                         if (visiblePinned.isNotEmpty()) item(KEY_PINNED_ALBUMS) {
                             AnimatedVisibility(
@@ -1210,58 +1218,68 @@ fun AlbumsContent(
             }
         }
         if (multiSelectAlbums) {
-            Row(
+            Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 12.dp)
-                    .clip(RoundedCornerShape(24.dp))
+                    .padding(horizontal = 12.dp, vertical = 12.dp)
+                    .clip(RoundedCornerShape(20.dp))
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
                     text = stringResource(Res.string.album_selection_count, selectedAlbumIds.size),
-                    modifier = Modifier.padding(horizontal = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
                     style = MaterialTheme.typography.labelLarge,
-                    maxLines = 1
+                    textAlign = TextAlign.Center,
                 )
-                TextButton(
-                    onClick = {
-                        onAddAlbumsToProfiles(selectedAlbumIdsForAction)
-                        clearAlbumSelection()
-                    }
-                ) { Text(stringResource(Res.string.album_selection_add_profile)) }
-                TextButton(
-                    onClick = {
-                        onRemoveAlbumsFromProfiles(selectedAlbumIdsForAction)
-                        clearAlbumSelection()
-                    }
-                ) { Text(stringResource(Res.string.album_selection_remove_profile)) }
-                if (onAddAlbumsToCollection != null) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     TextButton(
+                        modifier = Modifier.weight(1f),
                         onClick = {
-                            onAddAlbumsToCollection(selectedAlbumIdsForAction)
+                            onAddAlbumsToProfiles(selectedAlbumIdsForAction)
                             clearAlbumSelection()
                         }
-                    ) { Text(stringResource(Res.string.album_selection_add_collection)) }
+                    ) { Text(stringResource(Res.string.album_selection_add_profile), textAlign = TextAlign.Center) }
+                    TextButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            onRemoveAlbumsFromProfiles(selectedAlbumIdsForAction)
+                            clearAlbumSelection()
+                        }
+                    ) { Text(stringResource(Res.string.album_selection_remove_profile), textAlign = TextAlign.Center) }
                 }
-                TextButton(
-                    onClick = {
-                        selectedAlbums.forEach(onMoveAlbumToTrash)
-                        clearAlbumSelection()
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    if (onAddAlbumsToCollection != null) {
+                        TextButton(
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                onAddAlbumsToCollection(selectedAlbumIdsForAction)
+                                clearAlbumSelection()
+                            }
+                        ) { Text(stringResource(Res.string.album_selection_add_collection), textAlign = TextAlign.Center) }
                     }
-                ) { Text(stringResource(Res.string.album_selection_delete)) }
-                TextButton(
-                    onClick = {
-                        selectedAlbums.forEach(onIgnoreAlbum)
-                        clearAlbumSelection()
-                    }
-                ) { Text(stringResource(Res.string.album_selection_ignore)) }
-                TextButton(onClick = clearAlbumSelection) {
-                    Text(stringResource(Res.string.album_selection_cancel))
+                    TextButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            selectedAlbums.forEach(onMoveAlbumToTrash)
+                            clearAlbumSelection()
+                        }
+                    ) { Text(stringResource(Res.string.album_selection_delete), textAlign = TextAlign.Center) }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TextButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            selectedAlbums.forEach(onIgnoreAlbum)
+                            clearAlbumSelection()
+                        }
+                    ) { Text(stringResource(Res.string.album_selection_ignore), textAlign = TextAlign.Center) }
+                    TextButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = clearAlbumSelection
+                    ) { Text(stringResource(Res.string.album_selection_cancel), textAlign = TextAlign.Center) }
                 }
             }
         }
@@ -1273,7 +1291,7 @@ fun AlbumsContent(
             screenTopPadding = paddingValues.calculateTopPadding(),
             contentTopPadding = innerPaddingValues.calculateTopPadding(),
             pageColor = pageColor,
-            filterChips = if (arranging) null else filterChips,
+            filterChips = if (arranging || multiSelectAlbums) null else filterChips,
         )
         }
     }

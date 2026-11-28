@@ -232,6 +232,23 @@ class ProfileViewModel @Inject constructor(
         return result
     }
 
+    /** Profiles that already contain every selected album (used to offer only missing targets). */
+    suspend fun profilesContainingAllAlbums(albumIds: List<Long>): Set<Long> {
+        val ids = albumIds.distinct().toSet()
+        if (ids.isEmpty()) return emptySet()
+        val result = mutableSetOf<Long>()
+        val excluded = dataStore.data.first()[ALL_PHOTOS_EXCLUDED_ALBUM_IDS].orEmpty()
+        val allPhotosIds = deviceAlbums.value.asSequence().map { it.id }
+            .filterNot { it.toString() in excluded }
+            .toSet()
+        if (allPhotosIds.containsAll(ids)) result += Profile.ALL_PHOTOS_ID
+        profiles.value.forEach { profile ->
+            val included = repository.getAlbumIdsInProfile(profile.id).first().toSet()
+            if (included.containsAll(ids)) result += profile.id
+        }
+        return result
+    }
+
     /**
      * Updates only the albums shown by the active profile's selector.
      * Membership outside [sourceAlbumIds] is preserved in the target profile.

@@ -121,9 +121,13 @@ fun AlbumsScreen(
     var pendingAlbumIds by rememberSaveable { mutableStateOf(emptyList<Long>()) }
     var initiallySelectedProfileIds by remember { mutableStateOf(emptySet<Long>()) }
 
-    LaunchedEffect(showProfileTargetSheet, pendingAlbumIds, profiles) {
+    LaunchedEffect(showProfileTargetSheet, pendingAlbumIds, profiles, profileTargetAction) {
         initiallySelectedProfileIds = if (showProfileTargetSheet) {
-            profileViewModel.profilesContainingAlbums(pendingAlbumIds)
+            if (profileTargetAction == ProfileTargetAction.ADD) {
+                profileViewModel.profilesContainingAllAlbums(pendingAlbumIds)
+            } else {
+                profileViewModel.profilesContainingAlbums(pendingAlbumIds)
+            }
         } else emptySet()
     }
 

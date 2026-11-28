@@ -51,7 +51,12 @@ fun ProfileTargetSheet(
 ) {
     if (!visible) return
     var selectedIds by remember(visible, action, initiallySelectedProfileIds) {
-        mutableStateOf(initiallySelectedProfileIds)
+        mutableStateOf(if (action == ProfileTargetAction.REMOVE) initiallySelectedProfileIds else emptySet())
+    }
+    val showAllPhotos = (Profile.ALL_PHOTOS_ID in initiallySelectedProfileIds) ==
+        (action == ProfileTargetAction.REMOVE)
+    val targetProfiles = profiles.filter { profile ->
+        (profile.id in initiallySelectedProfileIds) == (action == ProfileTargetAction.REMOVE)
     }
     val allPhotosId = Profile.ALL_PHOTOS_ID
     val title = stringResource(
@@ -73,7 +78,7 @@ fun ProfileTargetSheet(
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
-            ProfileTargetRow(
+            if (showAllPhotos) ProfileTargetRow(
                 name = stringResource(Res.string.profile_all_photos),
                 selected = allPhotosId in selectedIds,
                 onToggle = {
@@ -81,7 +86,7 @@ fun ProfileTargetSheet(
                     else selectedIds + allPhotosId
                 }
             )
-            profiles.forEach { profile ->
+            targetProfiles.forEach { profile ->
                 ProfileTargetRow(
                     name = profile.name,
                     selected = profile.id in selectedIds,
