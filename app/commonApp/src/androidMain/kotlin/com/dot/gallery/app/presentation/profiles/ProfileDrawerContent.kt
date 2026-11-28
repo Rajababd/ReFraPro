@@ -474,6 +474,7 @@ fun ProfileDrawerContent(onProfileSelected: () -> Unit) {
 }
 
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ProfileDrawerEntry(
     modifier: Modifier = Modifier,
