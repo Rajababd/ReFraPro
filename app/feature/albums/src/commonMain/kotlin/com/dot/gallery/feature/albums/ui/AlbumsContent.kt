@@ -894,7 +894,7 @@ fun AlbumsContent(
                             start = PageSidePadding,
                             end = PageSidePadding,
                             top = innerPaddingValues.calculateTopPadding(),
-                            bottom = bottomBarInset + 16.dp + 64.dp
+                            bottom = bottomBarInset + 16.dp + if (multiSelectAlbums) 224.dp else 64.dp
                         ),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
